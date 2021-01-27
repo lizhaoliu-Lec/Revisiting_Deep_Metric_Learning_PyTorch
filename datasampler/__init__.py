@@ -8,9 +8,9 @@ import datasampler.d2_coreset_sampler
 
 def select(sampler, opt, image_dict, image_list=None, **kwargs):
     if 'batchmatch' in sampler:
-        if sampler=='disthist_batchmatch':
+        if sampler == 'disthist_batchmatch':
             sampler_lib = disthist_batchmatch_sampler
-        elif sampler=='fid_batchmatch':
+        elif sampler == 'fid_batchmatch':
             sampler_lib = spc_fid_batchmatch_sampler
     elif 'random' in sampler:
         if 'class' in sampler:
@@ -25,6 +25,6 @@ def select(sampler, opt, image_dict, image_list=None, **kwargs):
     else:
         raise Exception('Minibatch sampler <{}> not available!'.format(sampler))
 
-    sampler = sampler_lib.Sampler(opt,image_dict=image_dict,image_list=image_list)
+    sampler = sampler_lib.Sampler(opt, image_dict=image_dict, image_list=image_list)
 
     return sampler

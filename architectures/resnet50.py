@@ -4,17 +4,16 @@ The network architectures and weights are adapted and used from the great https:
 import torch, torch.nn as nn
 import pretrainedmodels as ptm
 
-
-
-
-
 """============================================================="""
+
+
 class Network(torch.nn.Module):
     def __init__(self, opt):
         super(Network, self).__init__()
 
-        self.pars  = opt
-        self.model = ptm.__dict__['resnet50'](num_classes=1000, pretrained='imagenet' if not opt.not_pretrained else None)
+        self.pars = opt
+        self.model = ptm.__dict__['resnet50'](num_classes=1000,
+                                              pretrained='imagenet' if not opt.not_pretrained else None)
 
         self.name = opt.arch
 
@@ -29,14 +28,13 @@ class Network(torch.nn.Module):
 
         self.out_adjust = None
 
-
     def forward(self, x, **kwargs):
         x = self.model.maxpool(self.model.relu(self.model.bn1(self.model.conv1(x))))
         for layerblock in self.layer_blocks:
             x = layerblock(x)
         no_avg_feat = x
         x = self.model.avgpool(x)
-        enc_out = x = x.view(x.size(0),-1)
+        enc_out = x = x.view(x.size(0), -1)
 
         x = self.model.last_linear(x)
 

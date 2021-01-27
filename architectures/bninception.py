@@ -4,14 +4,14 @@ The network architectures and weights are adapted and used from the great https:
 import torch, torch.nn as nn, torch.nn.functional as F
 import pretrainedmodels as ptm
 
-
-
 """============================================================="""
+
+
 class Network(torch.nn.Module):
     def __init__(self, opt, return_embed_dict=False):
         super(Network, self).__init__()
 
-        self.pars  = opt
+        self.pars = opt
         self.model = ptm.__dict__['bninception'](num_classes=1000, pretrained='imagenet')
         self.model.last_linear = torch.nn.Linear(self.model.last_linear.in_features, opt.embed_dim)
         if '_he' in opt.arch:
@@ -38,13 +38,13 @@ class Network(torch.nn.Module):
         if self.pool_aux is not None:
             y += self.pool_aux(x)
         if warmup:
-            y,x = y.detach(), x.detach()
-        z = self.model.last_linear(y.view(len(x),-1))
+            y, x = y.detach(), x.detach()
+        z = self.model.last_linear(y.view(len(x), -1))
         if 'normalize' in self.name:
             z = F.normalize(z, dim=-1)
         if self.out_adjust and not self.training:
             z = self.out_adjust(z)
-        return z,(y,x)
+        return z, (y, x)
 
     def functional_forward(self, x):
         pass
