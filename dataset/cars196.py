@@ -1,5 +1,6 @@
-from datasets.basic_dataset_scaffold import BaseDataset
 import os
+
+from dataset.basic_dataset_scaffold import BaseDataset
 
 
 def Give(opt, datapath):

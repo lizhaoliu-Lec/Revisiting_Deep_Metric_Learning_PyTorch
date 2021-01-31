@@ -1,7 +1,7 @@
 from sklearn import metrics
 
 
-class Metric():
+class Metric:
     def __init__(self, **kwargs):
         self.requires = ['kmeans_nearest_cosine', 'target_labels']
         self.name = 'c_nmi'

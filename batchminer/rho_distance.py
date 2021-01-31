@@ -1,7 +1,10 @@
-import numpy as np, torch
+import numpy as np
+import torch
+
+from batchminer.utils import check_if_numpy
 
 
-class BatchMiner():
+class BatchMiner:
     def __init__(self, opt):
         self.par = opt
         self.lower_cutoff = opt.miner_rho_distance_lower_cutoff
@@ -11,7 +14,8 @@ class BatchMiner():
         self.name = 'rho_distance'
 
     def __call__(self, batch, labels, return_distances=False):
-        if isinstance(labels, torch.Tensor): labels = labels.detach().cpu().numpy()
+        labels = check_if_numpy(labels)
+
         bs = batch.shape[0]
         distances = self.pdist(batch.detach()).clamp(min=self.lower_cutoff)
 
@@ -20,7 +24,7 @@ class BatchMiner():
         anchors = []
 
         for i in range(bs):
-            neg = labels != labels[i];
+            neg = labels != labels[i]
             pos = labels == labels[i]
 
             use_contr = np.random.choice(2, p=[1 - self.contrastive_p, self.contrastive_p])
@@ -59,7 +63,7 @@ class BatchMiner():
         q_d_inv = torch.exp(log_q_d_inv - torch.max(log_q_d_inv))  # - max(log) for stability
         q_d_inv[np.where(labels == anchor_label)[0]] = 0
 
-        ### NOTE: Cutting of values with high distances made the results slightly worse. It can also lead to
+        # NOTE: Cutting of values with high distances made the results slightly worse. It can also lead to
         # errors where there are no available negatives (for high samples_per_class cases).
         # q_d_inv[np.where(dists.detach().cpu().numpy()>self.upper_cutoff)[0]]    = 0
 

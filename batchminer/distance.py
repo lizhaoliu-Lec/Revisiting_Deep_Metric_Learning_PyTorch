@@ -1,9 +1,10 @@
 import numpy as np
-import torch, torch.nn as nn, torch.nn.functional as F
-import batchminer
+import torch
+
+from batchminer.utils import check_if_numpy
 
 
-class BatchMiner():
+class BatchMiner:
     def __init__(self, opt):
         self.par = opt
         self.lower_cutoff = opt.miner_distance_lower_cutoff
@@ -11,7 +12,7 @@ class BatchMiner():
         self.name = 'distance'
 
     def __call__(self, batch, labels, tar_labels=None, return_distances=False, distances=None):
-        if isinstance(labels, torch.Tensor): labels = labels.detach().cpu().numpy()
+        labels = check_if_numpy(labels)
         bs, dim = batch.shape
 
         if distances is None:
@@ -25,7 +26,7 @@ class BatchMiner():
         tar_labels = labels if tar_labels is None else tar_labels
 
         for i in range(bs):
-            neg = tar_labels != labels[i];
+            neg = tar_labels != labels[i]
             pos = tar_labels == labels[i]
 
             anchors.append(i)
@@ -34,7 +35,8 @@ class BatchMiner():
 
             if np.sum(pos) > 0:
                 # Sample positives randomly
-                if np.sum(pos) > 1: pos[i] = 0
+                if np.sum(pos) > 1:
+                    pos[i] = 0
                 positives.append(np.random.choice(np.where(pos)[0]))
                 # Sample negatives by distance
 
@@ -45,7 +47,8 @@ class BatchMiner():
         else:
             return sampled_triplets
 
-    def inverse_sphere_distances(self, dim, bs, anchor_to_all_dists, labels, anchor_label):
+    @staticmethod
+    def inverse_sphere_distances(dim, bs, anchor_to_all_dists, labels, anchor_label):
         dists = anchor_to_all_dists
 
         # negated log-distribution of distances of unit sphere in dimension <dim>
@@ -56,14 +59,15 @@ class BatchMiner():
         q_d_inv = torch.exp(log_q_d_inv - torch.max(log_q_d_inv))  # - max(log) for stability
         q_d_inv[np.where(labels == anchor_label)[0]] = 0
 
-        ### NOTE: Cutting of values with high distances made the results slightly worse. It can also lead to
+        # NOTE: Cutting of values with high distances made the results slightly worse. It can also lead to
         # errors where there are no available negatives (for high samples_per_class cases).
         # q_d_inv[np.where(dists.detach().cpu().numpy()>self.upper_cutoff)[0]]    = 0
 
         q_d_inv = q_d_inv / q_d_inv.sum()
         return q_d_inv.detach().cpu().numpy()
 
-    def pdist(self, A):
+    @staticmethod
+    def pdist(A):
         prod = torch.mm(A, A.t())
         norm = prod.diag().unsqueeze(1).expand_as(prod)
         res = (norm + norm.t() - 2 * prod).clamp(min=0)

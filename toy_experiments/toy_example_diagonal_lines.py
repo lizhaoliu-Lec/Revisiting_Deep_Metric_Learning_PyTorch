@@ -1,7 +1,10 @@
-import os, numpy as np, matplotlib.pyplot as plt
-import torch, torch.nn as nn, torchvision as tv
-import numpy as np
+import os
 import random
+
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+import torch.nn as nn
 
 """==================================================="""
 seed = 1
@@ -45,7 +48,6 @@ os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 
 ###############
 import itertools as it
-from tqdm import tqdm
 import torch.nn.functional as F
 
 bs = 24

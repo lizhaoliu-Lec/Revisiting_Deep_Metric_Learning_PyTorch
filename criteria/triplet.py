@@ -1,15 +1,18 @@
-import numpy as np
-import torch, torch.nn as nn, torch.nn.functional as F
+import torch
+import torch.nn.functional as F
+
 import batchminer
 
-"""================================================================================================="""
 ALLOWED_MINING_OPS = list(batchminer.BATCHMINING_METHODS.keys())
 REQUIRES_BATCHMINER = True
 REQUIRES_OPTIM = False
 
 
-### Standard Triplet Loss, finds triplets in Mini-batches.
 class Criterion(torch.nn.Module):
+    """
+    Standard Triplet Loss, finds triplets in Mini-batches.
+    """
+
     def __init__(self, opt, batchminer):
         super(Criterion, self).__init__()
         self.margin = opt.loss_triplet_margin

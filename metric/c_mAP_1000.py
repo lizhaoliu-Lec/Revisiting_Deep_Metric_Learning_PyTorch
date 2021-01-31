@@ -1,25 +1,24 @@
-import torch
-import numpy as np
 import faiss
+import numpy as np
+import torch
 
 
-class Metric():
+class Metric:
     def __init__(self, **kwargs):
-        self.requires = ['features', 'target_labels']
-        self.name = 'mAP_lim'
+        self.requires = ['features_cosine', 'target_labels']
+        self.name = 'c_mAP_1000'
 
-    def __call__(self, target_labels, features):
+    def __call__(self, target_labels, features_cosine):
         labels, freqs = np.unique(target_labels, return_counts=True)
-        ## Account for faiss-limit at k=1023
-        R = min(1023, len(features))
+        R = 1000
 
-        faiss_search_index = faiss.IndexFlatL2(features.shape[-1])
-        if isinstance(features, torch.Tensor):
-            features = features.detach().cpu().numpy()
+        faiss_search_index = faiss.IndexFlatIP(features_cosine.shape[-1])
+        if isinstance(features_cosine, torch.Tensor):
+            features_cosine = features_cosine.detach().cpu().numpy()
             res = faiss.StandardGpuResources()
             faiss_search_index = faiss.index_cpu_to_gpu(res, 0, faiss_search_index)
-        faiss_search_index.add(features)
-        nearest_neighbours = faiss_search_index.search(features, int(R + 1))[1][:, 1:]
+        faiss_search_index.add(features_cosine)
+        nearest_neighbours = faiss_search_index.search(features_cosine, int(R + 1))[1][:, 1:]
 
         target_labels = target_labels.reshape(-1)
         nn_labels = target_labels[nearest_neighbours]

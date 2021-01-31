@@ -1,10 +1,10 @@
-from scipy.spatial import distance
-from sklearn.preprocessing import normalize
 import numpy as np
 import torch
+from scipy.spatial import distance
+from sklearn.preprocessing import normalize
 
 
-class Metric():
+class Metric:
     def __init__(self, mode, **kwargs):
         self.mode = mode
         self.requires = ['features', 'target_labels']
@@ -40,7 +40,7 @@ class Metric():
                     coms.append(com)
                 mean_inter_dist = distance.cdist(np.array(coms), np.array(coms), 'cosine')
                 dist_metric = dist_metric_inter = np.sum(mean_inter_dist) / (
-                            len(mean_inter_dist) ** 2 - len(mean_inter_dist))
+                        len(mean_inter_dist) ** 2 - len(mean_inter_dist))
             else:
                 coms = []
                 for loc in features_locs:
@@ -49,7 +49,7 @@ class Metric():
                     coms.append(com)
                 mean_inter_dist = 1 - torch.cat(coms, dim=0).mm(torch.cat(coms, dim=0).T).detach().cpu().numpy()
                 dist_metric = dist_metric_inter = np.sum(mean_inter_dist) / (
-                            len(mean_inter_dist) ** 2 - len(mean_inter_dist))
+                        len(mean_inter_dist) ** 2 - len(mean_inter_dist))
 
         if self.mode == 'intra_over_inter':
             dist_metric = dist_metric_intra / np.clip(dist_metric_inter, 1e-8, None)

@@ -1,16 +1,17 @@
 import numpy as np
-import torch, torch.nn as nn, torch.nn.functional as F
-import batchminer
+import torch
+import torch.nn.functional as F
 
-"""================================================================================================="""
 ALLOWED_MINING_OPS = None
 REQUIRES_BATCHMINER = False
 REQUIRES_OPTIM = True
 
 
-### This Implementation follows: https://github.com/azgo14/classification_metric_learning
-
 class Criterion(torch.nn.Module):
+    """
+    This Implementation follows: https://github.com/azgo14/classification_metric_learning
+    """
+
     def __init__(self, opt):
         super(Criterion, self).__init__()
         self.par = opt
@@ -25,7 +26,6 @@ class Criterion(torch.nn.Module):
 
         self.lr = opt.loss_softmax_lr
 
-        ####
         self.ALLOWED_MINING_OPS = ALLOWED_MINING_OPS
         self.REQUIRES_BATCHMINER = REQUIRES_BATCHMINER
         self.REQUIRES_OPTIM = REQUIRES_OPTIM

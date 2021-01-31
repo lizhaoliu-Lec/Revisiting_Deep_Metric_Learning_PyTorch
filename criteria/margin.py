@@ -1,15 +1,18 @@
-import numpy as np
-import torch, torch.nn as nn, torch.nn.functional as F
+import torch
+import torch.nn.functional as F
+
 import batchminer
 
-"""================================================================================================="""
 ALLOWED_MINING_OPS = list(batchminer.BATCHMINING_METHODS.keys())
 REQUIRES_BATCHMINER = True
 REQUIRES_OPTIM = True
 
 
-### MarginLoss with trainable class separation margin beta. Runs on Mini-batches as well.
 class Criterion(torch.nn.Module):
+    """
+    MarginLoss with trainable class separation margin beta. Runs on Mini-batches as well.
+    """
+
     def __init__(self, opt, batchminer):
         super(Criterion, self).__init__()
         self.n_classes = opt.n_classes
@@ -30,7 +33,6 @@ class Criterion(torch.nn.Module):
 
         self.lr = opt.loss_margin_beta_lr
 
-        ####
         self.ALLOWED_MINING_OPS = ALLOWED_MINING_OPS
         self.REQUIRES_BATCHMINER = REQUIRES_BATCHMINER
         self.REQUIRES_OPTIM = REQUIRES_OPTIM
@@ -69,7 +71,7 @@ class Criterion(torch.nn.Module):
 
             if self.nu:
                 beta_regularization_loss = torch.sum(beta)
-                loss += self.nu * beta_regularisation_loss.to(torch.float).to(d_ap.device)
+                loss += self.nu * beta_regularization_loss.to(torch.float).to(d_ap.device)
         else:
             loss = torch.tensor(0.).to(torch.float).to(batch.device)
 

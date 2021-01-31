@@ -1,15 +1,16 @@
-import numpy as np, torch
-import itertools as it
-import random
+import numpy as np
+
+from batchminer.utils import check_if_numpy
 
 
-class BatchMiner():
+class BatchMiner:
     def __init__(self, opt):
         self.par = opt
         self.name = 'random'
 
     def __call__(self, batch, labels):
-        if isinstance(labels, torch.Tensor): labels = labels.detach().cpu().numpy()
+        labels = check_if_numpy(labels)
+
         unique_classes = np.unique(labels)
         indices = np.arange(len(batch))
         class_dict = {i: indices[labels == i] for i in unique_classes}

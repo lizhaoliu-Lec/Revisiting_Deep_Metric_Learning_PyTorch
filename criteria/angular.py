@@ -1,8 +1,7 @@
 import numpy as np
-import torch, torch.nn as nn, torch.nn.functional as F
-import batchminer
+import torch
+import torch.nn.functional as F
 
-"""================================================================================================="""
 ALLOWED_MINING_OPS = ['npair']
 REQUIRES_BATCHMINER = True
 REQUIRES_OPTIM = False
@@ -19,13 +18,12 @@ class Criterion(torch.nn.Module):
 
         self.name = 'angular'
 
-        ####
         self.ALLOWED_MINING_OPS = ALLOWED_MINING_OPS
         self.REQUIRES_BATCHMINER = REQUIRES_BATCHMINER
         self.REQUIRES_OPTIM = REQUIRES_OPTIM
 
     def forward(self, batch, labels, **kwargs):
-        ####NOTE: Normalize Angular Loss, but dont normalize npair loss!
+        # NOTE: Normalize Angular Loss, but dont normalize npair loss!
         anchors, positives, negatives = self.batchminer(batch, labels)
         anchors, positives, negatives = batch[anchors], batch[positives], batch[negatives]
         n_anchors, n_positives, n_negatives = F.normalize(anchors, dim=1), F.normalize(positives, dim=1), F.normalize(

@@ -1,8 +1,6 @@
-import numpy as np
-import torch, torch.nn as nn, torch.nn.functional as F
-import batchminer
+import torch
+import torch.nn.functional as F
 
-"""================================================================================================="""
 ALLOWED_MINING_OPS = None
 REQUIRES_BATCHMINER = False
 REQUIRES_OPTIM = True
@@ -16,7 +14,6 @@ class Criterion(torch.nn.Module):
         """
         super(Criterion, self).__init__()
 
-        ####
         self.num_proxies = opt.n_classes
         self.embed_dim = opt.embed_dim
 
@@ -27,13 +24,13 @@ class Criterion(torch.nn.Module):
 
         self.optim_dict_list = [{'params': self.proxies, 'lr': opt.lr * opt.loss_proxynca_lrmulti}]
 
-        ####
         self.ALLOWED_MINING_OPS = ALLOWED_MINING_OPS
         self.REQUIRES_BATCHMINER = REQUIRES_BATCHMINER
         self.REQUIRES_OPTIM = REQUIRES_OPTIM
 
     def forward(self, batch, labels, **kwargs):
-        # Empirically, multiplying the embeddings during the computation of the loss seem to allow for more stable training;
+        # Empirically, multiplying the embeddings
+        # during the computation of the loss seem to allow for more stable training;
         # Acts as a temperature in the NCA objective.
         batch = 3 * torch.nn.functional.normalize(batch, dim=1)
         proxies = 3 * torch.nn.functional.normalize(self.proxies, dim=1)

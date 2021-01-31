@@ -1,6 +1,7 @@
-from datasets.basic_dataset_scaffold import BaseDataset
-import os, numpy as np
+import numpy as np
 import pandas as pd
+
+from dataset.basic_dataset_scaffold import BaseDataset
 
 
 def Give(opt, datapath):

@@ -1,13 +1,10 @@
-import numpy as np
-import torch, torch.nn as nn, torch.nn.functional as F
-from tqdm import tqdm
 import random
 
-"""======================================================"""
+import torch
+
 REQUIRES_STORAGE = False
 
 
-###
 class Sampler(torch.utils.data.sampler.Sampler):
     """
     Plugs into PyTorch Batchsampler Package.
@@ -35,7 +32,7 @@ class Sampler(torch.utils.data.sampler.Sampler):
     def __iter__(self):
         for _ in range(self.sampler_length):
             subset = []
-            ### Random Subset from Random classes
+            # Random Subset from Random classes
             draws = self.batch_size // self.samples_per_class
 
             for _ in range(draws):

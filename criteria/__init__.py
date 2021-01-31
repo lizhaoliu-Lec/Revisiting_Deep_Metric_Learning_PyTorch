@@ -1,14 +1,10 @@
 ### Standard DML criteria
-from criteria import triplet, margin, proxynca, npair
-from criteria import lifted, contrastive, softmax
-from criteria import angular, snr, histogram, arcface
-from criteria import softtriplet, multisimilarity, quadruplet
 ### Non-Standard Criteria
 from criteria import adversarial_separation
-### Basic Libs
-import copy
-
-"""================================================================================================="""
+from criteria import angular, snr, histogram, arcface
+from criteria import lifted, contrastive, softmax
+from criteria import softtriplet, multisimilarity, quadruplet
+from criteria import triplet, margin, proxynca, npair
 
 
 def select(loss, opt, to_optim, batchminer=None):

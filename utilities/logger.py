@@ -1,13 +1,20 @@
-import datetime, csv, os, numpy as np
-from matplotlib import pyplot as plt
+import csv
+import datetime
+import os
 import pickle as pkl
+
+import matplotlib.pyplot as plt
+import numpy as np
+from tensorboardX import SummaryWriter
+
 from utilities.misc import gimme_save_string
 
-"""============================================================================================================="""
 
+class CSVWriter:
+    """
+    WRITE TO CSV FILE
+    """
 
-################## WRITE TO CSV FILE #####################
-class CSV_Writer():
     def __init__(self, save_path):
         self.save_path = save_path
         self.written = []
@@ -19,7 +26,8 @@ class CSV_Writer():
 
         with open(self.save_path + '_' + group + '.csv', "a") as csv_file:
             writer = csv.writer(csv_file, delimiter=",")
-            if group not in self.written: writer.writerow(segments)
+            if group not in self.written:
+                writer.writerow(segments)
             for line in content:
                 writer.writerow(line)
                 self.n_written_lines[group] += 1
@@ -27,13 +35,17 @@ class CSV_Writer():
         self.written.append(group)
 
 
-################## PLOT SUMMARY IMAGE #####################
-class InfoPlotter():
+class InfoPlotter:
+    """
+    PLOT SUMMARY IMAGE
+    """
+
     def __init__(self, save_path, title='Training Log', figsize=(25, 19)):
         self.save_path = save_path
         self.title = title
         self.figsize = figsize
         self.colors = ['r', 'g', 'b', 'y', 'm', 'c', 'orange', 'darkgreen', 'lightblue']
+        self.ov_title = None
 
     def make_plot(self, base_title, title_append, sub_plots, sub_plots_data):
         sub_plots = list(sub_plots)
@@ -62,19 +74,21 @@ class InfoPlotter():
         plt.close()
 
 
-################## GENERATE LOGGING FOLDER/FILES #######################
-def set_logging(opt):
-    checkfolder = opt.save_path + '/' + opt.savename
+def init_logging(opt):
+    """
+    GENERATE LOGGING FOLDER/FILES
+    """
+    check_folder = opt.save_path + '/' + opt.savename
     if opt.savename == '':
         date = datetime.datetime.now()
         time_string = '{}-{}-{}-{}-{}-{}'.format(date.year, date.month, date.day, date.hour, date.minute, date.second)
-        checkfolder = opt.save_path + '/{}_{}_'.format(opt.dataset.upper(), opt.arch.upper()) + time_string
+        check_folder = opt.save_path + '/{}_{}_'.format(opt.dataset.upper(), opt.arch.upper()) + time_string
     counter = 1
-    while os.path.exists(checkfolder):
-        checkfolder = opt.save_path + '/' + opt.savename + '_' + str(counter)
+    while os.path.exists(check_folder):
+        check_folder = opt.save_path + '/' + opt.savename + '_' + str(counter)
         counter += 1
-    os.makedirs(checkfolder)
-    opt.save_path = checkfolder
+    os.makedirs(check_folder)
+    opt.save_path = check_folder
 
     if 'experiment' in vars(opt):
         import argparse
@@ -83,17 +97,18 @@ def set_logging(opt):
     else:
         save_opt = opt
 
-    with open(save_opt.save_path + '/Parameter_Info.txt', 'w') as f:
+    with open(save_opt.save_path + '/ParameterInfo.txt', 'w') as f:
         f.write(gimme_save_string(save_opt))
-    pkl.dump(save_opt, open(save_opt.save_path + "/hypa.pkl", "wb"))
+    pkl.dump(save_opt, open(save_opt.save_path + "/HyperParameter.pkl", "wb"))
 
 
-class Progress_Saver():
+class ProgressSaver:
     def __init__(self):
         self.groups = {}
 
     def log(self, segment, content, group=None):
-        if group is None: group = segment
+        if group is None:
+            group = segment
         if group not in self.groups.keys():
             self.groups[group] = {}
 
@@ -103,43 +118,53 @@ class Progress_Saver():
         self.groups[group][segment]['content'].append(content)
 
 
-class LOGGER():
-    def __init__(self, opt, sub_loggers=[], prefix=None, start_new=True, log_online=False):
+class LOGGER:
+    def __init__(self, opt, sub_loggers=None, prefix=None, start_new=True, log_online=False):
         """
         LOGGER Internal Structure:
 
-        self.progress_saver: Contains multiple Progress_Saver instances to log metrics for main metric subsets (e.g. "Train" for training metrics)
+        self.progress_saver: Contains multiple ProgressSaver instances to log metric for main metric subsets
+                            (e.g. "Train" for training metric)
             ['main_subset_name']: Name of each main subset (-> e.g. "Train")
                 .groups: Dictionary of subsets belonging to one of the main subsets, e.g. ["Recall", "NMI", ...]
                     ['specific_metric_name']: Specific name of the metric of interest, e.g. Recall@1.
         """
+        if sub_loggers is None:
+            sub_loggers = []
         self.prop = opt
         self.prefix = '{}_'.format(prefix) if prefix is not None else ''
         self.sub_loggers = sub_loggers
 
-        ### Make Logging Directories
-        if start_new: set_logging(opt)
+        # Make Logging Directories
+        if start_new:
+            init_logging(opt)
 
-        ### Set Graph and CSV writer
+        # Set Graph and CSV writer
         self.csv_writer, self.graph_writer, self.progress_saver = {}, {}, {}
         for sub_logger in sub_loggers:
-            csv_savepath = opt.save_path + '/CSV_Logs'
-            if not os.path.exists(csv_savepath): os.makedirs(csv_savepath)
-            self.csv_writer[sub_logger] = CSV_Writer(csv_savepath + '/Data_{}{}'.format(self.prefix, sub_logger))
+            csv_savepath = opt.save_path + '/CSVLogs'
+            if not os.path.exists(csv_savepath):
+                os.makedirs(csv_savepath)
+            self.csv_writer[sub_logger] = CSVWriter(csv_savepath + '/Data_{}{}'.format(self.prefix, sub_logger))
 
-            prgs_savepath = opt.save_path + '/Progression_Plots'
-            if not os.path.exists(prgs_savepath): os.makedirs(prgs_savepath)
+            prgs_savepath = opt.save_path + '/ProgressionPlots'
+            if not os.path.exists(prgs_savepath):
+                os.makedirs(prgs_savepath)
             self.graph_writer[sub_logger] = InfoPlotter(prgs_savepath + '/Graph_{}{}'.format(self.prefix, sub_logger))
-            self.progress_saver[sub_logger] = Progress_Saver()
+            self.progress_saver[sub_logger] = ProgressSaver()
 
-        ### WandB Init
+        # WandB Init
         self.save_path = opt.save_path
         self.log_online = log_online
 
-    def update(self, *sub_loggers, all=False):
+        # Tensorboard Init
+        self.tensorboard = SummaryWriter(log_dir=opt.save_path)
+
+    def update(self, *sub_loggers, update_all=False):
         online_content = []
 
-        if all: sub_loggers = self.sub_loggers
+        if update_all:
+            sub_loggers = self.sub_loggers
 
         for sub_logger in list(sub_loggers):
             for group in self.progress_saver[sub_logger].groups.keys():
@@ -179,3 +204,6 @@ class LOGGER():
                         self.prop.experiment.log_metric(item[0], np.mean(item[1]), self.prop.epoch)
                     else:
                         self.prop.experiment.log_metric(item[0], item[1], self.prop.epoch)
+
+    def __del__(self):
+        self.tensorboard.close()

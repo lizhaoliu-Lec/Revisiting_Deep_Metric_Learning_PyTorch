@@ -1,9 +1,9 @@
 import datasampler.class_random_sampler
-import datasampler.random_sampler
-import datasampler.greedy_coreset_sampler
-import datasampler.fid_batchmatch_sampler
-import datasampler.disthist_batchmatch_sampler
 import datasampler.d2_coreset_sampler
+import datasampler.disthist_batchmatch_sampler
+import datasampler.fid_batchmatch_sampler
+import datasampler.greedy_coreset_sampler
+import datasampler.random_sampler
 
 
 def select(sampler, opt, image_dict, image_list=None, **kwargs):

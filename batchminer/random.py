@@ -1,15 +1,19 @@
-import numpy as np, torch
 import itertools as it
 import random
 
+import numpy as np
 
-class BatchMiner():
+from batchminer.utils import check_if_numpy
+
+
+class BatchMiner:
     def __init__(self, opt):
         self.par = opt
         self.name = 'random'
 
     def __call__(self, batch, labels):
-        if isinstance(labels, torch.Tensor): labels = labels.detach().cpu().numpy()
+        labels = check_if_numpy(labels)
+
         unique_classes = np.unique(labels)
         indices = np.arange(len(batch))
         class_dict = {i: indices[labels == i] for i in unique_classes}
@@ -21,6 +25,7 @@ class BatchMiner():
                             sampled_triplets]
         sampled_triplets = [x for y in sampled_triplets for x in y]
 
-        # NOTE: The number of possible triplets is given by #unique_classes*(2*(samples_per_class-1)!)*(#unique_classes-1)*samples_per_class
+        # NOTE: The number of possible triplets is given by
+        # #unique_classes*(2*(samples_per_class-1)!)*(#unique_classes-1)*samples_per_class
         sampled_triplets = random.sample(sampled_triplets, batch.shape[0])
         return sampled_triplets

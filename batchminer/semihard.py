@@ -1,14 +1,18 @@
-import numpy as np, torch
+import numpy as np
+import torch
+
+from batchminer.utils import check_if_numpy
 
 
-class BatchMiner():
+class BatchMiner:
     def __init__(self, opt):
         self.par = opt
         self.name = 'semihard'
         self.margin = vars(opt)['loss_' + opt.loss + '_margin']
 
     def __call__(self, batch, labels, return_distances=False):
-        if isinstance(labels, torch.Tensor): labels = labels.detach().numpy()
+        labels = check_if_numpy(labels)
+
         bs = batch.size(0)
         # Return distance matrix for all elements in batch (BSxBS)
         distances = self.pdist(batch.detach()).detach().cpu().numpy()
@@ -17,7 +21,7 @@ class BatchMiner():
         anchors = []
         for i in range(bs):
             l, d = labels[i], distances[i]
-            neg = labels != l;
+            neg = labels != l
             pos = labels == l
 
             anchors.append(i)

@@ -1,13 +1,13 @@
 """
-The network architectures and weights are adapted and used from the great https://github.com/Cadene/pretrained-models.pytorch.
+The network architectures and weights are adapted and used from the great
+https://github.com/Cadene/pretrained-models.pytorch.
 """
-import torch, torch.nn as nn
 import pretrainedmodels as ptm
+import torch.nn as nn
+import torch.nn.functional as F
 
-"""============================================================="""
 
-
-class Network(torch.nn.Module):
+class Network(nn.Module):
     def __init__(self, opt):
         super(Network, self).__init__()
 
@@ -22,7 +22,7 @@ class Network(torch.nn.Module):
                 module.eval()
                 module.train = lambda _: None
 
-        self.model.last_linear = torch.nn.Linear(self.model.last_linear.in_features, opt.embed_dim)
+        self.model.last_linear = nn.Linear(self.model.last_linear.in_features, opt.embed_dim)
 
         self.layer_blocks = nn.ModuleList([self.model.layer1, self.model.layer2, self.model.layer3, self.model.layer4])
 
@@ -32,15 +32,15 @@ class Network(torch.nn.Module):
         x = self.model.maxpool(self.model.relu(self.model.bn1(self.model.conv1(x))))
         for layerblock in self.layer_blocks:
             x = layerblock(x)
-        no_avg_feat = x
+        x_before_pooled = x
         x = self.model.avgpool(x)
-        enc_out = x = x.view(x.size(0), -1)
+        x_pooled = x = x.view(x.size(0), -1)
 
         x = self.model.last_linear(x)
 
         if 'normalize' in self.pars.arch:
-            x = torch.nn.functional.normalize(x, dim=-1)
+            x = nn.functional.normalize(x, dim=-1)
         if self.out_adjust and not self.train:
             x = self.out_adjust(x)
 
-        return x, (enc_out, no_avg_feat)
+        return x, (x_pooled, x_before_pooled)

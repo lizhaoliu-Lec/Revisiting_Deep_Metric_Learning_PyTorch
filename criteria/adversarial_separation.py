@@ -1,17 +1,18 @@
-import numpy as np
-import torch, torch.nn as nn, torch.nn.functional as F
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
 import batchminer
 
-"""================================================================================================="""
 ALLOWED_MINING_OPS = list(batchminer.BATCHMINING_METHODS.keys())
 REQUIRES_BATCHMINER = False
 REQUIRES_OPTIM = True
 
 
-### MarginLoss with trainable class separation margin beta. Runs on Mini-batches as well.
 class Criterion(torch.nn.Module):
     def __init__(self, opt):
         """
+        MarginLoss with trainable class separation margin beta. Runs on Mini-batches as well.
         Args:
             margin:             Triplet Margin.
             nu:                 Regularisation Parameter for beta values if they are learned.
@@ -20,7 +21,6 @@ class Criterion(torch.nn.Module):
         """
         super().__init__()
 
-        ####
         self.embed_dim = opt.embed_dim
         self.proj_dim = opt.diva_decorrnet_dim
 
@@ -40,7 +40,6 @@ class Criterion(torch.nn.Module):
         # Learning Rate for Projection Network
         self.lr = opt.diva_decorrnet_lr
 
-        ####
         self.ALLOWED_MINING_OPS = ALLOWED_MINING_OPS
         self.REQUIRES_BATCHMINER = REQUIRES_BATCHMINER
         self.REQUIRES_OPTIM = REQUIRES_OPTIM
@@ -58,9 +57,9 @@ class Criterion(torch.nn.Module):
         return sim_loss
 
 
-### Gradient Reversal Layer
 class GradRev(torch.autograd.Function):
     """
+    Gradient Reversal Layer
     Implements an autograd class to flip gradients during backward pass.
     """
 
@@ -80,12 +79,12 @@ class GradRev(torch.autograd.Function):
         Input:
             grad_output: any computed gradient.
         """
-        return (grad_output * -1.)
+        return grad_output * -1.
 
 
-### Gradient reverse function
 def grad_reverse(x):
     """
+    Gradient reverse function
     Applies gradient reversal on input.
 
     Input:

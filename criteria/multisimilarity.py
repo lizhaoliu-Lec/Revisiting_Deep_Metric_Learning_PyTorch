@@ -1,6 +1,5 @@
-import torch, torch.nn as nn
+import torch
 
-"""================================================================================================="""
 ALLOWED_MINING_OPS = None
 REQUIRES_BATCHMINER = False
 REQUIRES_OPTIM = False
@@ -18,7 +17,6 @@ class Criterion(torch.nn.Module):
 
         self.name = 'multisimilarity'
 
-        ####
         self.ALLOWED_MINING_OPS = ALLOWED_MINING_OPS
         self.REQUIRES_BATCHMINER = REQUIRES_BATCHMINER
         self.REQUIRES_OPTIM = REQUIRES_OPTIM
@@ -35,7 +33,7 @@ class Criterion(torch.nn.Module):
             anchor_pos_sim = similarity[i][pos_idxs]
             anchor_neg_sim = similarity[i][neg_idxs]
 
-            ### This part doesn't really work, especially when you dont have a lot of positives in the batch...
+            # This part doesn't really work, especially when you dont have a lot of positives in the batch...
             neg_idxs = (anchor_neg_sim + self.margin) > torch.min(anchor_pos_sim)
             pos_idxs = (anchor_pos_sim - self.margin) < torch.max(anchor_neg_sim)
             if not torch.sum(neg_idxs) or not torch.sum(pos_idxs):

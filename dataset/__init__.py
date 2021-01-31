@@ -1,6 +1,6 @@
-import datasets.cub200
-import datasets.cars196
-import datasets.stanford_online_products
+import dataset.cars196
+import dataset.cub200
+import dataset.stanford_online_products
 
 
 def select(dataset, opt, data_path):

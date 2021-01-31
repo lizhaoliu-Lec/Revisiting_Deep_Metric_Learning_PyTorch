@@ -1,15 +1,14 @@
-import numpy as np
-import torch, torch.nn as nn, torch.nn.functional as F
-from tqdm import tqdm
 import random
-from scipy import linalg
-from scipy.stats import multivariate_normal
 
-"""======================================================"""
+import numpy as np
+import torch
+import torch.nn as nn
+from scipy.stats import multivariate_normal
+from tqdm import tqdm
+
 REQUIRES_STORAGE = True
 
 
-###
 class Sampler(torch.utils.data.sampler.Sampler):
     """
     Plugs into PyTorch Batchsampler Package.
@@ -45,7 +44,7 @@ class Sampler(torch.utils.data.sampler.Sampler):
         from joblib import Parallel, delayed
         import time
 
-        ### Random Subset from Random classes
+        # Random Subset from Random classes
         bigb_idxs = np.random.choice(len(self.storage), self.bigbs, replace=True)
         bigbatch = self.storage[bigb_idxs]
 

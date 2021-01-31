@@ -1,8 +1,9 @@
-import numpy as np
-import torch, torch.nn as nn, torch.nn.functional as F
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
 import batchminer
 
-"""================================================================================================="""
 ALLOWED_MINING_OPS = list(batchminer.BATCHMINING_METHODS.keys())
 REQUIRES_BATCHMINER = True
 REQUIRES_OPTIM = False
@@ -17,7 +18,6 @@ class Criterion(torch.nn.Module):
 
         self.name = 'contrastive'
 
-        ####
         self.ALLOWED_MINING_OPS = ALLOWED_MINING_OPS
         self.REQUIRES_BATCHMINER = REQUIRES_BATCHMINER
         self.REQUIRES_OPTIM = REQUIRES_OPTIM

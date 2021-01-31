@@ -1,5 +1,6 @@
-from datasets.basic_dataset_scaffold import BaseDataset
 import os
+
+from dataset.basic_dataset_scaffold import BaseDataset
 
 
 def Give(opt, datapath):
@@ -9,7 +10,7 @@ def Give(opt, datapath):
     total_conversion = {int(x.split('.')[0]) - 1: x.split('.')[-1] for x in image_classes}
     image_list = {int(key.split('.')[0]) - 1: sorted(
         [image_sourcepath + '/' + key + '/' + x for x in os.listdir(image_sourcepath + '/' + key) if '._' not in x]) for
-                  key in image_classes}
+        key in image_classes}
     image_list = [[(key, img_path) for img_path in image_list[key]] for key in image_list.keys()]
     image_list = [x for y in image_list for x in y]
 

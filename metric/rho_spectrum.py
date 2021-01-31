@@ -1,9 +1,7 @@
-from scipy.spatial import distance
-from sklearn.preprocessing import normalize
 import numpy as np
 
 
-class Metric():
+class Metric:
     def __init__(self, embed_dim, mode, **kwargs):
         self.mode = mode
         self.embed_dim = embed_dim

@@ -1,5 +1,5 @@
-from batchminer import random_distance, intra_random
 from batchminer import lifted, rho_distance, softhard, npair, parametric, random, semihard, distance
+from batchminer import random_distance, intra_random
 
 BATCHMINING_METHODS = {'random': random,
                        'semihard': semihard,

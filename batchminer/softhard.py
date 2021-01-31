@@ -1,7 +1,8 @@
-import numpy as np, torch
+import numpy as np
+import torch
 
 
-class BatchMiner():
+class BatchMiner:
     def __init__(self, opt):
         self.par = opt
         self.name = 'softhard'
@@ -16,7 +17,7 @@ class BatchMiner():
         anchors = []
         for i in range(bs):
             l, d = labels[i], distances[i]
-            neg = labels != l;
+            neg = labels != l
             pos = labels == l
 
             if np.sum(pos) > 1:

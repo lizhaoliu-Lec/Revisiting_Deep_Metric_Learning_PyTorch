@@ -1,9 +1,9 @@
 """
 This scripts downloads and evaluates W&B run data to produce plots and tables used in the original paper.
 """
+import matplotlib.pyplot as plt
 import numpy as np
 import wandb
-import matplotlib.pyplot as plt
 
 
 def get_data(project):
@@ -17,7 +17,7 @@ def get_data(project):
     # history_list = []
     for run in tqdm(runs, desc='Downloading data...'):
         config = {k: v for k, v in run.config.items() if not k.startswith('_')}
-        info_dict = {'metrics': run.history(), 'config': config}
+        info_dict = {'metric': run.history(), 'config': config}
         info_list.append((run.name, info_dict))
     return info_list
 
@@ -25,8 +25,8 @@ def get_data(project):
 all_df = get_data("confusezius/RevisitDML")
 
 names_to_check = list(np.unique(['_s'.join(x[0].split('_s')[:-1]) for x in all_df]))
-metrics = ['Test: discriminative_e_recall: e_recall@1', 'Test: discriminative_e_recall: e_recall@2', \
-           'Test: discriminative_e_recall: e_recall@4', 'Test: discriminative_nmi: nmi', \
+metrics = ['Test: discriminative_e_recall: e_recall@1', 'Test: discriminative_e_recall: e_recall@2',
+           'Test: discriminative_e_recall: e_recall@4', 'Test: discriminative_nmi: nmi',
            'Test: discriminative_f1: f1', 'Test: discriminative_mAP: mAP']
 metric_names = ['R@1', 'R@2', 'R@4', 'NMI', 'F1', 'mAP']
 
@@ -52,27 +52,27 @@ for group, runs in idxs.items():
     for i, run in enumerate(runs):
         name, data = all_df[run]
         for metric, metric_name in zip(metrics, metric_names):
-            if len(data['metrics']):
-                sub_data = list(data['metrics'][metric])
+            if len(data['metric']):
+                sub_data = list(data['metric'][metric])
                 if len(sub_data) > min_len:
                     vals[group][metric_name].append(np.nanmax(sub_data))
                     if metric_name == 'R@1':
                         r_argmax = np.nanargmax(sub_data)
                         vals[group]['Max_Epoch'].append(r_argmax)
                         vals[group]['Intra_over_Inter'].append(
-                            data['metrics']['Train: discriminative_dists: dists@intra_over_inter'][r_argmax])
+                            data['metric']['Train: discriminative_dists: dists@intra_over_inter'][r_argmax])
                         vals[group]['Intra'].append(
-                            data['metrics']['Train: discriminative_dists: dists@intra'][r_argmax])
+                            data['metric']['Train: discriminative_dists: dists@intra'][r_argmax])
                         vals[group]['Inter'].append(
-                            data['metrics']['Train: discriminative_dists: dists@inter'][r_argmax])
+                            data['metric']['Train: discriminative_dists: dists@inter'][r_argmax])
                         vals[group]['Rho1'].append(
-                            data['metrics']['Train: discriminative_rho_spectrum: rho_spectrum@-1'][r_argmax])
+                            data['metric']['Train: discriminative_rho_spectrum: rho_spectrum@-1'][r_argmax])
                         vals[group]['Rho2'].append(
-                            data['metrics']['Train: discriminative_rho_spectrum: rho_spectrum@1'][r_argmax])
+                            data['metric']['Train: discriminative_rho_spectrum: rho_spectrum@1'][r_argmax])
                         vals[group]['Rho3'].append(
-                            data['metrics']['Train: discriminative_rho_spectrum: rho_spectrum@2'][r_argmax])
+                            data['metric']['Train: discriminative_rho_spectrum: rho_spectrum@2'][r_argmax])
                         vals[group]['Rho4'].append(
-                            data['metrics']['Train: discriminative_rho_spectrum: rho_spectrum@10'][r_argmax])
+                            data['metric']['Train: discriminative_rho_spectrum: rho_spectrum@10'][r_argmax])
     vals[group] = {metric_name: (np.mean(metric_vals), np.std(metric_vals)) for metric_name, metric_vals in
                    vals[group].items()}
 

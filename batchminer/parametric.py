@@ -1,7 +1,10 @@
-import numpy as np, torch
+import numpy as np
+import torch
+
+from batchminer.utils import check_if_numpy
 
 
-class BatchMiner():
+class BatchMiner:
     def __init__(self, opt):
         self.par = opt
         self.mode = opt.miner_parametric_mode
@@ -9,34 +12,32 @@ class BatchMiner():
         self.support_lim = opt.miner_parametric_support_lim
         self.name = 'parametric'
 
-        ###
         self.set_sample_distr()
+
+        self.support = None
 
     def __call__(self, batch, labels):
         bs = batch.shape[0]
         sample_distr = self.sample_distr
 
-        if isinstance(labels, torch.Tensor): labels = labels.detach().cpu().numpy()
+        labels = check_if_numpy(labels)
 
-        ###
         distances = self.pdist(batch.detach())
 
         p_assigns = np.sum((distances.cpu().numpy().reshape(-1) > self.support[1:-1].reshape(-1, 1)).T, axis=1).reshape(
             distances.shape)
         outside_support_lim = (distances.cpu().numpy().reshape(-1) < self.support_lim[0]) * (
-                    distances.cpu().numpy().reshape(-1) > self.support_lim[1])
+                distances.cpu().numpy().reshape(-1) > self.support_lim[1])
         outside_support_lim = outside_support_lim.reshape(distances.shape)
 
         sample_ps = sample_distr[p_assigns]
         sample_ps[outside_support_lim] = 0
 
-        ###
         anchors, labels_visited = [], []
         positives, negatives = [], []
 
-        ###
         for i in range(bs):
-            neg = labels != labels[i];
+            neg = labels != labels[i]
             pos = labels == labels[i]
 
             if np.sum(pos) > 1:
@@ -73,7 +74,7 @@ class BatchMiner():
 
         if self.mode == 'semihards':
             self.sample_distr = self.support.copy()
-            from IPython import embed;
+            from IPython import embed
             embed()
             self.sample_distr[(self.support <= 0.7) * (self.support >= 0.3)] = 1
             self.sample_distr[(self.support < 0.3) * (self.support > 0.7)] = 0

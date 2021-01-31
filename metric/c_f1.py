@@ -1,31 +1,27 @@
 import numpy as np
-from scipy.special import comb, binom
 import torch
+from scipy.special import comb
 
 
-class Metric():
+class Metric:
     def __init__(self, **kwargs):
-        self.requires = ['kmeans', 'kmeans_nearest', 'features', 'target_labels']
-        self.name = 'f1'
+        self.requires = ['kmeans_cosine', 'kmeans_nearest_cosine', 'features_cosine', 'target_labels']
+        self.name = 'c_f1'
 
-    def __call__(self, target_labels, computed_cluster_labels, features, centroids):
-        import time
-        start = time.time()
-        if isinstance(features, torch.Tensor):
-            features = features.detach().cpu().numpy()
-        d = np.zeros(len(features))
-        for i in range(len(features)):
-            d[i] = np.linalg.norm(features[i, :] - centroids[computed_cluster_labels[i], :])
+    def __call__(self, target_labels, computed_cluster_labels_cosine, features_cosine, centroids_cosine):
+        if isinstance(features_cosine, torch.Tensor):
+            features_cosine = features_cosine.detach().cpu().numpy()
+        d = np.zeros(len(features_cosine))
+        for i in range(len(features_cosine)):
+            d[i] = np.linalg.norm(features_cosine[i, :] - centroids_cosine[computed_cluster_labels_cosine[i], :])
 
-        start = time.time()
-        labels_pred = np.zeros(len(features))
-        for i in np.unique(computed_cluster_labels):
-            index = np.where(computed_cluster_labels == i)[0]
+        labels_pred = np.zeros(len(features_cosine))
+        for i in np.unique(computed_cluster_labels_cosine):
+            index = np.where(computed_cluster_labels_cosine == i)[0]
             ind = np.argmin(d[index])
             cid = index[ind]
             labels_pred[index] = cid
 
-        start = time.time()
         N = len(target_labels)
 
         # cluster n_labels
@@ -60,7 +56,6 @@ class Metric():
 
         # compute True Positive (TP)
         tp = 0
-        start = time.time()
         for k in range(n_labels):
             member = np.where(target_labels == avail_labels[k])[0]
             member_ids = labels_pred[member]

@@ -1,15 +1,17 @@
 import numpy as np
-import torch, torch.nn as nn, torch.nn.functional as F
-import batchminer
+import torch
+import torch.nn.functional as F
 
-"""================================================================================================="""
 ALLOWED_MINING_OPS = None
 REQUIRES_BATCHMINER = False
 REQUIRES_OPTIM = True
 
 
-### This implementation follows https://github.com/idstcv/SoftTriple
 class Criterion(torch.nn.Module):
+    """
+    This implementation follows https://github.com/idstcv/SoftTriple
+    """
+
     def __init__(self, opt):
         super(Criterion, self).__init__()
 

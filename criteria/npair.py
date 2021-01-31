@@ -1,6 +1,4 @@
-import numpy as np
-import torch, torch.nn as nn, torch.nn.functional as F
-import batchminer
+import torch
 
 """================================================================================================="""
 ALLOWED_MINING_OPS = ['npair']
@@ -20,7 +18,6 @@ class Criterion(torch.nn.Module):
 
         self.name = 'npair'
 
-        ####
         self.ALLOWED_MINING_OPS = ALLOWED_MINING_OPS
         self.REQUIRES_BATCHMINER = REQUIRES_BATCHMINER
         self.REQUIRES_OPTIM = REQUIRES_OPTIM
@@ -28,10 +25,9 @@ class Criterion(torch.nn.Module):
     def forward(self, batch, labels, **kwargs):
         anchors, positives, negatives = self.batchminer(batch, labels)
 
-        ##
         loss = 0
         if 'bninception' in self.pars.arch:
-            ### clamping/value reduction to avoid initial overflow for high embedding dimensions!
+            # clamping/value reduction to avoid initial overflow for high embedding dimensions!
             batch = batch / 4
         for anchor, positive, negative_set in zip(anchors, positives, negatives):
             a_embs, p_embs, n_embs = batch[anchor:anchor + 1], batch[positive:positive + 1], batch[negative_set]

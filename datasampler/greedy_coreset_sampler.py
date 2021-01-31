@@ -1,8 +1,9 @@
-import numpy as np
-import torch, torch.nn as nn, torch.nn.functional as F
-from tqdm import tqdm
 import random
-from scipy import linalg
+
+import numpy as np
+import torch
+import torch.nn as nn
+from tqdm import tqdm
 
 """======================================================"""
 REQUIRES_STORAGE = True
@@ -104,7 +105,7 @@ class Sampler(torch.utils.data.sampler.Sampler):
             embed_collect = torch.cat(embed_collect, dim=0)
             if self.mb_mom > 0:
                 self.delta_storage = self.mb_mom * self.delta_storage + (1 - self.mb_mom) * (
-                            embed_collect - self.storage)
+                        embed_collect - self.storage)
                 self.storage = embed_collect + self.mb_lr * self.delta_storage
             else:
                 self.storage = embed_collect

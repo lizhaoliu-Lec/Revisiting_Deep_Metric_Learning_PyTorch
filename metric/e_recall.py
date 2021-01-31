@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class Metric():
+class Metric:
     def __init__(self, k, **kwargs):
         self.k = k
         self.requires = ['nearest_features', 'target_labels']

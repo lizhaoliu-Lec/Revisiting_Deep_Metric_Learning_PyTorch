@@ -1,9 +1,9 @@
-import torch
-import numpy as np
 import faiss
+import numpy as np
+import torch
 
 
-class Metric():
+class Metric:
     def __init__(self, **kwargs):
         self.requires = ['features_cosine', 'target_labels']
         self.name = 'c_mAP_lim'

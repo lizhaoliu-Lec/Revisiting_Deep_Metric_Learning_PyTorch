@@ -1,8 +1,7 @@
-import numpy as np
-import torch, torch.nn as nn, torch.nn.functional as F
-import batchminer
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
-"""================================================================================================="""
 ALLOWED_MINING_OPS = ['lifted']
 REQUIRES_BATCHMINER = True
 REQUIRES_OPTIM = False
@@ -17,7 +16,6 @@ class Criterion(torch.nn.Module):
 
         self.name = 'lifted'
 
-        ####
         self.ALLOWED_MINING_OPS = ALLOWED_MINING_OPS
         self.REQUIRES_BATCHMINER = REQUIRES_BATCHMINER
         self.REQUIRES_OPTIM = REQUIRES_OPTIM

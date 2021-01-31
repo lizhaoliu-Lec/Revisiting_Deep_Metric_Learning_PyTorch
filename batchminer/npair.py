@@ -1,13 +1,15 @@
-import numpy as np, torch
+import numpy as np
+
+from batchminer.utils import check_if_numpy
 
 
-class BatchMiner():
+class BatchMiner:
     def __init__(self, opt):
         self.par = opt
         self.name = 'npair'
 
     def __call__(self, batch, labels):
-        if isinstance(labels, torch.Tensor): labels = labels.detach().cpu().numpy()
+        labels = check_if_numpy(labels)
 
         anchors, positives, negatives = [], [], []
 
@@ -22,7 +24,6 @@ class BatchMiner():
                 positive = np.random.choice(avail_positive)
                 positives.append(positive)
 
-        ###
         negatives = []
         for anchor, positive in zip(anchors, positives):
             neg_idxs = [i for i in range(len(batch)) if i not in [anchor, positive] and labels[i] != labels[anchor]]

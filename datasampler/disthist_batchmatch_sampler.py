@@ -1,15 +1,14 @@
-import numpy as np
-import torch, torch.nn as nn, torch.nn.functional as F
-from tqdm import tqdm
 import random
-from scipy import linalg
-from scipy.stats import wasserstein_distance
 
-"""======================================================"""
+import numpy as np
+import torch
+import torch.nn as nn
+from scipy.stats import wasserstein_distance
+from tqdm import tqdm
+
 REQUIRES_STORAGE = True
 
 
-###
 class Sampler(torch.utils.data.sampler.Sampler):
     """
     Plugs into PyTorch Batchsampler Package.
@@ -55,7 +54,7 @@ class Sampler(torch.utils.data.sampler.Sampler):
     def precompute_indices(self):
         from joblib import Parallel, delayed
         import time
-        ### Random Subset from Random classes
+        # Random Subset from Random classes
         # self.disthist_match()
         print('Precomputing Indices... ', end='')
         start = time.time()
@@ -68,19 +67,20 @@ class Sampler(torch.utils.data.sampler.Sampler):
     def replace_storage_entries(self, embeddings, indices):
         self.storage[indices] = embeddings
 
+    @torch.no_grad()
     def create_storage(self, dataloader, model, device):
-        with torch.no_grad():
-            _ = model.eval()
-            _ = model.to(device)
+        model.eval()
+        model.to(device)
 
-            embed_collect = []
-            for i, input_tuple in enumerate(tqdm(dataloader, 'Creating data storage...')):
-                embed = model(input_tuple[1].type(torch.FloatTensor).to(device))
-                if isinstance(embed, tuple): embed = embed[0]
-                embed = embed.cpu()
-                embed_collect.append(embed)
-            embed_collect = torch.cat(embed_collect, dim=0)
-            self.storage = embed_collect
+        embed_collect = []
+        for i, input_tuple in enumerate(tqdm(dataloader, 'Creating data storage...')):
+            embed = model(input_tuple[1].type(torch.FloatTensor).to(device))
+            if isinstance(embed, tuple):
+                embed = embed[0]
+            embed = embed.cpu()
+            embed_collect.append(embed)
+        embed_collect = torch.cat(embed_collect, dim=0)
+        self.storage = embed_collect
 
     def spc_batchfinder(self, n_samples):
         ### SpC-Sample big batch:
