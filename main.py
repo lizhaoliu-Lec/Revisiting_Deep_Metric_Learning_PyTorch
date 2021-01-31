@@ -197,7 +197,7 @@ def main():
         _ = model.train()
 
         loss_collect = []
-        data_iterator = tqdm(dataloaders['training'], desc='Epoch {} Training...'.format(epoch))
+        data_iterator = tqdm(dataloaders['training'], desc='Epoch {}/{} Training...'.format(epoch, opt.n_epochs))
 
         for i, out in enumerate(data_iterator):
             global_steps = epoch * len(data_iterator) + i
