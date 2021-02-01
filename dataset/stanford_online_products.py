@@ -1,22 +1,23 @@
-import numpy as np
 import pandas as pd
 
 from dataset.basic_dataset_scaffold import BaseDataset
 
 
-def Give(opt, datapath):
-    image_sourcepath = opt.source_path + '/images'
+def get_dataset(opt, data_path):
+    image_source_path = data_path + '/images'
     training_files = pd.read_table(opt.source_path + '/Info_Files/Ebay_train.txt', header=0, delimiter=' ')
     test_files = pd.read_table(opt.source_path + '/Info_Files/Ebay_test.txt', header=0, delimiter=' ')
 
-    spi = np.array([(a, b) for a, b in zip(training_files['super_class_id'], training_files['class_id'])])
     super_dict = {}
     super_conversion = {}
-    for i, (super_ix, class_ix, image_path) in enumerate(
-            zip(training_files['super_class_id'], training_files['class_id'], training_files['path'])):
-        if super_ix not in super_dict: super_dict[super_ix] = {}
-        if class_ix not in super_dict[super_ix]: super_dict[super_ix][class_ix] = []
-        super_dict[super_ix][class_ix].append(image_sourcepath + '/' + image_path)
+    for (super_ix, class_ix, image_path) in zip(training_files['super_class_id'],
+                                                training_files['class_id'],
+                                                training_files['path']):
+        if super_ix not in super_dict:
+            super_dict[super_ix] = {}
+        if class_ix not in super_dict[super_ix]:
+            super_dict[super_ix][class_ix] = []
+        super_dict[super_ix][class_ix].append(image_source_path + '/' + image_path)
 
     if opt.use_tv_split:
         if not opt.tv_split_by_samples:
@@ -47,7 +48,6 @@ def Give(opt, datapath):
         train_image_dict = super_dict
         val_image_dict = None
 
-    ####
     test_image_dict = {}
     train_image_dict_temp = {}
     val_image_dict_temp = {}
@@ -56,15 +56,12 @@ def Give(opt, datapath):
     train_conversion = {}
     super_train_conversion = {}
     val_conversion = {}
-    super_val_conversion = {}
     test_conversion = {}
     super_test_conversion = {}
 
-    ## Create Training Dictionaries
-    i = 0
+    # Create Training Dictionaries
     for super_ix, super_set in train_image_dict.items():
         super_ix -= 1
-        counter = 0
         super_train_image_dict[super_ix] = []
         for class_ix, class_set in super_set.items():
             class_ix -= 1
@@ -73,16 +70,12 @@ def Give(opt, datapath):
             if class_ix not in train_conversion:
                 train_conversion[class_ix] = class_set[0].split('/')[-1].split('_')[0]
                 super_conversion[class_ix] = class_set[0].split('/')[-2]
-            counter += 1
-            i += 1
     train_image_dict = train_image_dict_temp
 
-    ## Create Validation Dictionaries
+    # Create Validation Dictionaries
     if opt.use_tv_split:
-        i = 0
         for super_ix, super_set in val_image_dict.items():
             super_ix -= 1
-            counter = 0
             super_val_image_dict[super_ix] = []
             for class_ix, class_set in super_set.items():
                 class_ix -= 1
@@ -91,22 +84,19 @@ def Give(opt, datapath):
                 if class_ix not in val_conversion:
                     val_conversion[class_ix] = class_set[0].split('/')[-1].split('_')[0]
                     super_conversion[class_ix] = class_set[0].split('/')[-2]
-                counter += 1
-                i += 1
         val_image_dict = val_image_dict_temp
     else:
         val_image_dict = None
 
-    ## Create Test Dictioniaries
+    # Create Test Dictionaries
     for class_ix, img_path in zip(test_files['class_id'], test_files['path']):
         class_ix = class_ix - 1
-        if not class_ix in test_image_dict.keys():
+        if class_ix not in test_image_dict.keys():
             test_image_dict[class_ix] = []
-        test_image_dict[class_ix].append(image_sourcepath + '/' + img_path)
+        test_image_dict[class_ix].append(image_source_path + '/' + img_path)
         test_conversion[class_ix] = img_path.split('/')[-1].split('_')[0]
         super_test_conversion[class_ix] = img_path.split('/')[-2]
 
-    ##
     if val_image_dict:
         val_dataset = BaseDataset(val_image_dict, opt, is_validation=True)
         val_dataset.conversion = val_conversion
@@ -127,5 +117,9 @@ def Give(opt, datapath):
     test_dataset.conversion = test_conversion
     eval_dataset.conversion = train_conversion
 
-    return {'training': train_dataset, 'validation': val_dataset, 'testing': test_dataset, 'evaluation': eval_dataset,
-            'evaluation_train': eval_train_dataset, 'super_evaluation': super_train_dataset}
+    return {'training': train_dataset,
+            'validation': val_dataset,
+            'testing': test_dataset,
+            'evaluation': eval_dataset,
+            'evaluation_train': eval_train_dataset,
+            'super_evaluation': super_train_dataset}
