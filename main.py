@@ -240,7 +240,7 @@ def main():
 
             if i == len(dataloaders['training']) - 1:
                 data_iterator.set_description(
-                    'Epoch (Train) {0}: Mean Loss [{1:.4f}]'.format(epoch, np.mean(loss_collect)))
+                    'Epoch (Train) {0}/{1}: Mean Loss [{2:.4f}]'.format(epoch, opt.n_epochs, np.mean(loss_collect)))
 
             # A brilliant way to update embeddings!
             if train_data_sampler.requires_storage and train_data_sampler.update_storage:
@@ -257,14 +257,14 @@ def main():
 
         # Evaluate Metric for Training & Test (& Validation)
         model.eval()
-        print('\nComputing Testing Metrics...')
+        print('\nEpoch {0}/{1} Computing Testing Metrics...'.format(epoch, opt.n_epochs))
         eval.evaluate(LOG, metric_computer, [dataloaders['testing']], model, opt, opt.eval_types,
                       opt.device, log_key='Test')
         if opt.use_tv_split:
-            print('\nComputing Validation Metrics...')
+            print('\nEpoch {0}/{1} Computing Validation Metrics...'.format(epoch, opt.n_epochs))
             eval.evaluate(LOG, metric_computer, [dataloaders['validation']], model, opt, opt.eval_types,
                           opt.device, log_key='Val')
-        print('\nComputing Training Metrics...')
+        print('\nEpoch {0}/{1} Computing Training Metrics...'.format(epoch, opt.n_epochs))
         eval.evaluate(LOG, metric_computer, [dataloaders['evaluation']], model, opt, opt.eval_types,
                       opt.device, log_key='Train')
 
