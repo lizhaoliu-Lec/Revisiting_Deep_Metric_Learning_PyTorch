@@ -99,8 +99,6 @@ def main():
         wandb.init(project=opt.project, group=opt.group, name=opt.savename, dir=opt.save_path)
         wandb.config.update(opt)
 
-    # Load Remaining Libraries that neeed to be loaded after comet_ml
-
     full_training_start_time = time.time()
 
     opt.source_path += '/' + opt.dataset
