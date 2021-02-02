@@ -4,7 +4,7 @@ import numpy as np
 from dataset.basic_dataset_scaffold import BaseDataset
 
 
-def Give(opt, data_path):
+def get_dataset(opt, data_path):
     image_source_path = data_path + '/images'
     image_classes = sorted([x for x in os.listdir(image_source_path)])
     total_conversion = {i: x for i, x in enumerate(image_classes)}
