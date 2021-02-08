@@ -3,7 +3,7 @@ import pandas as pd
 from dataset.basic_dataset_scaffold import BaseDataset
 
 
-def get_dataset(opt, data_path):
+def get_dataset(opt, data_path, TrainDatasetClass=None):
     image_source_path = data_path + '/images'
     training_files = pd.read_table(opt.source_path + '/Info_Files/Ebay_train.txt', header=0, delimiter=' ')
     test_files = pd.read_table(opt.source_path + '/Info_Files/Ebay_test.txt', header=0, delimiter=' ')
@@ -107,7 +107,9 @@ def get_dataset(opt, data_path):
         opt.use_tv_split, len(train_image_dict), len(val_image_dict) if val_image_dict else 'X', len(test_image_dict)))
 
     super_train_dataset = BaseDataset(super_train_image_dict, opt, is_validation=True)
-    train_dataset = BaseDataset(train_image_dict, opt)
+    if TrainDatasetClass is None:
+        TrainDatasetClass = BaseDataset
+    train_dataset = TrainDatasetClass(train_image_dict, opt)
     test_dataset = BaseDataset(test_image_dict, opt, is_validation=True)
     eval_dataset = BaseDataset(train_image_dict, opt, is_validation=True)
     eval_train_dataset = BaseDataset(train_image_dict, opt)
