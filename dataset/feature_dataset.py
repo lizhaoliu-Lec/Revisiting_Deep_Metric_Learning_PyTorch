@@ -11,6 +11,13 @@ class FeatureDataset(BaseDataset):
 
         self.has_got_features = False
         self.features = self.get_features(self.pars)
+        self.return_feature = True
+
+    def set_return_feature(self, return_or_not):
+        self.return_feature = return_or_not
+
+    def reset_return_feature(self):
+        self.return_feature = True
 
     @torch.no_grad()
     def get_features(self, opt):
@@ -57,9 +64,12 @@ class FeatureDataset(BaseDataset):
         return features
 
     def __getitem__(self, idx):
-        img_path, img_tensor, img_idx = super().__getitem__(idx)
+        img_label, img_tensor, img_idx = super().__getitem__(idx)
         if not self.has_got_features:
-            return img_path, img_tensor, img_idx
+            return img_label, img_tensor, img_idx
         else:
             feature = self.features[idx]
-            return img_path, img_tensor, feature, img_idx
+            if self.return_feature:
+                return img_label, img_tensor, feature, img_idx
+            else:
+                return img_label, img_tensor, img_idx
