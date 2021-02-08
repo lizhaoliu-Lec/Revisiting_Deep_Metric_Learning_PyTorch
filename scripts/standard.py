@@ -126,7 +126,7 @@ def main(opt):
         metrics = LOG.graph_writer[sub_logger].ov_title
         summary_text += '{} metric: {}\n'.format(sub_logger.upper(), metrics)
 
-    with open(opt.save_path + '/training_summary.txt', 'w') as summary_file:
+    with open(LOG.save_path + '/training_summary.txt', 'w') as summary_file:
         summary_file.write(summary_text)
 
 

@@ -99,9 +99,9 @@ def init_logging(opt):
     else:
         save_opt = opt
 
-    with open(save_opt.save_path + '/ParameterInfo.txt', 'w') as f:
+    with open(check_folder + '/ParameterInfo.txt', 'w') as f:
         f.write(gimme_save_string(save_opt))
-    pkl.dump(save_opt, open(save_opt.save_path + "/HyperParameter.pkl", "wb"))
+    pkl.dump(save_opt, open(check_folder + "/HyperParameter.pkl", "wb"))
 
     return check_folder
 

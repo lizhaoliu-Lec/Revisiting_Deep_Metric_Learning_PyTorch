@@ -7,22 +7,22 @@ from PIL import Image
 from utilities.logger import LOGGER
 
 
-def evaluate(LOG: LOGGER, metric_computer, dataloaders, model, opt, eval_types, device,
+def evaluate(LOG: LOGGER, metric_computer, dataloader, model, opt, eval_types, device,
              aux_store=None, make_recall_plot=False, log_key='Test'):
     """
     Parent-Function to compute evaluation metric, print summary string and
     store checkpoint files/plot sample recall plots.
     """
-    computed_metrics, extra_infos = metric_computer.compute_standard(opt, model, dataloaders[0], eval_types, device)
+    computed_metrics, extra_infos = metric_computer.compute_standard(opt, model, dataloader, eval_types, device)
 
     numeric_metrics = {}
-    histogr_metrics = {}
+    histogram_metrics = {}
     for main_key in computed_metrics.keys():
         for name, value in computed_metrics[main_key].items():
             if isinstance(value, np.ndarray):
-                if main_key not in histogr_metrics:
-                    histogr_metrics[main_key] = {}
-                histogr_metrics[main_key][name] = value
+                if main_key not in histogram_metrics:
+                    histogram_metrics[main_key] = {}
+                histogram_metrics[main_key][name] = value
             else:
                 if main_key not in numeric_metrics:
                     numeric_metrics[main_key] = {}
@@ -45,13 +45,13 @@ def evaluate(LOG: LOGGER, metric_computer, dataloaders, model, opt, eval_types, 
                 LOG.progress_saver[log_key].groups[parent_metric][storage_metric]['content']):
                 print('Saved weights for best {}: {}\n'.format(log_key, parent_metric))
                 set_checkpoint(model, opt, LOG.progress_saver,
-                               LOG.prop.save_path + '/checkpoint_{}_{}_{}.pth.tar'.format(log_key, eval_type,
+                               LOG.save_path + '/checkpoint_{}_{}_{}.pth.tar'.format(log_key, eval_type,
                                                                                           storage_metric),
                                aux=aux_store)
 
     if opt.log_online:
-        for eval_type in histogr_metrics.keys():
-            for eval_metric, hist in histogr_metrics[eval_type].items():
+        for eval_type in histogram_metrics.keys():
+            for eval_metric, hist in histogram_metrics[eval_type].items():
                 import wandb
                 wandb.log({log_key + ': ' + eval_type + '_{}'.format(eval_metric): wandb.Histogram(
                     np_histogram=(list(hist), list(np.arange(len(hist) + 1))))}, step=opt.epoch)
@@ -59,8 +59,8 @@ def evaluate(LOG: LOGGER, metric_computer, dataloaders, model, opt, eval_types, 
                     np_histogram=(list(np.log(hist) + 20), list(np.arange(len(hist) + 1))))}, step=opt.epoch)
 
     # log histogram to tensorboard
-    for eval_type in histogr_metrics.keys():
-        for eval_metric, hist in histogr_metrics[eval_type].items():
+    for eval_type in histogram_metrics.keys():
+        for eval_metric, hist in histogram_metrics[eval_type].items():
             LOG.tensorboard.add_histogram(tag='%s/%s' % (log_key, eval_type + '_%s' % eval_metric),
                                           values=hist, global_step=opt.epoch)
             LOG.tensorboard.add_histogram(tag='%s/%s' % (log_key, eval_type + '_LOG-%s' % eval_metric),
