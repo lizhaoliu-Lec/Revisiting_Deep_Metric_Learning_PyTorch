@@ -33,18 +33,18 @@ class Network(nn.Module):
         self.out_adjust = None
 
     def forward(self, x, warmup=False, **kwargs):
-        x = self.model.features(x)
-        x_pooled = self.pool_base(x)
+        x_before_pooled = self.model.features(x)
+        x_pooled = self.pool_base(x_before_pooled)
         if self.pool_aux is not None:
             x_pooled += self.pool_aux(x)
         if warmup:
             x_pooled, x = x_pooled.detach(), x.detach()
-        embedding = self.model.last_linear(x_pooled.view(len(x), -1))
+        x = self.model.last_linear(x_pooled.view(x.size(0), -1))
         if 'normalize' in self.name:
-            embedding = F.normalize(embedding, dim=-1)
+            x = F.normalize(x, dim=-1)
         if self.out_adjust and not self.training:
-            embedding = self.out_adjust(embedding)
-        return embedding, (x_pooled, x)
+            x = self.out_adjust(x)
+        return x, (x_pooled, x_before_pooled)
 
     def functional_forward(self, x):
         pass

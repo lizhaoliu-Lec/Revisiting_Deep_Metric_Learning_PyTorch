@@ -74,21 +74,23 @@ class InfoPlotter:
         plt.close()
 
 
+def get_time_string():
+    date = datetime.datetime.now()
+    return '{}-{}-{}-{}-{}-{}'.format(date.year, date.month, date.day, date.hour, date.minute, date.second)
+
+
 def init_logging(opt):
     """
     GENERATE LOGGING FOLDER/FILES
     """
     check_folder = opt.save_path + '/' + opt.savename
     if opt.savename == '':
-        date = datetime.datetime.now()
-        time_string = '{}-{}-{}-{}-{}-{}'.format(date.year, date.month, date.day, date.hour, date.minute, date.second)
-        check_folder = opt.save_path + '/{}_{}_'.format(opt.dataset.upper(), opt.arch.upper()) + time_string
+        check_folder = opt.save_path + '/{}_{}_'.format(opt.dataset.upper(), opt.arch.upper()) + get_time_string()
     counter = 1
     while os.path.exists(check_folder):
         check_folder = opt.save_path + '/' + opt.savename + '_' + str(counter)
         counter += 1
     os.makedirs(check_folder)
-    opt.save_path = check_folder
 
     if 'experiment' in vars(opt):
         import argparse
@@ -100,6 +102,8 @@ def init_logging(opt):
     with open(save_opt.save_path + '/ParameterInfo.txt', 'w') as f:
         f.write(gimme_save_string(save_opt))
     pkl.dump(save_opt, open(save_opt.save_path + "/HyperParameter.pkl", "wb"))
+
+    return check_folder
 
 
 class ProgressSaver:
@@ -123,10 +127,10 @@ class LOGGER:
         """
         LOGGER Internal Structure:
 
-        self.progress_saver: Contains multiple ProgressSaver instances to log metric for main metric subsets
+        self.progress_saver: Contains multiple ProgressSaver instances to log metric for scripts metric subsets
                             (e.g. "Train" for training metric)
-            ['main_subset_name']: Name of each main subset (-> e.g. "Train")
-                .groups: Dictionary of subsets belonging to one of the main subsets, e.g. ["Recall", "NMI", ...]
+            ['main_subset_name']: Name of each scripts subset (-> e.g. "Train")
+                .groups: Dictionary of subsets belonging to one of the scripts subsets, e.g. ["Recall", "NMI", ...]
                     ['specific_metric_name']: Specific name of the metric of interest, e.g. Recall@1.
         """
         if sub_loggers is None:
@@ -136,29 +140,30 @@ class LOGGER:
         self.sub_loggers = sub_loggers
 
         # Make Logging Directories
+        check_folder = opt.save_path
         if start_new:
-            init_logging(opt)
+            check_folder = init_logging(opt)
 
         # Set Graph and CSV writer
         self.csv_writer, self.graph_writer, self.progress_saver = {}, {}, {}
         for sub_logger in sub_loggers:
-            csv_savepath = opt.save_path + '/CSVLogs'
+            csv_savepath = check_folder + '/CSVLogs'
             if not os.path.exists(csv_savepath):
                 os.makedirs(csv_savepath)
             self.csv_writer[sub_logger] = CSVWriter(csv_savepath + '/Data_{}{}'.format(self.prefix, sub_logger))
 
-            prgs_savepath = opt.save_path + '/ProgressionPlots'
+            prgs_savepath = check_folder + '/ProgressionPlots'
             if not os.path.exists(prgs_savepath):
                 os.makedirs(prgs_savepath)
             self.graph_writer[sub_logger] = InfoPlotter(prgs_savepath + '/Graph_{}{}'.format(self.prefix, sub_logger))
             self.progress_saver[sub_logger] = ProgressSaver()
 
         # WandB Init
-        self.save_path = opt.save_path
+        self.save_path = check_folder
         self.log_online = log_online
 
         # Tensorboard Init
-        self.tensorboard = SummaryWriter(log_dir=opt.save_path)
+        self.tensorboard = SummaryWriter(log_dir=check_folder)
 
     def update(self, *sub_loggers, update_all=False):
         online_content = []

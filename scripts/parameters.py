@@ -1,4 +1,13 @@
+import argparse
 import os
+
+
+def get_basic_parameters():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--training_script', default='standard', type=str, help='Script used to train the model.')
+    parser.add_argument('--seed', default=0, type=int, help='Random seed for reproducibility.')
+    return parser
 
 
 def get_basic_training_parameters(parser):
@@ -25,7 +34,6 @@ def get_basic_training_parameters(parser):
     parser.add_argument('--n_epochs', default=150, type=int, help='Number of training epochs.')
     parser.add_argument('--kernels', default=6, type=int, help='Number of workers for pytorch dataloader.')
     parser.add_argument('--bs', default=112, type=int, help='Mini-Batchsize to use.')
-    parser.add_argument('--seed', default=0, type=int, help='Random seed for reproducibility.')
     parser.add_argument('--scheduler', default='step', type=str,
                         help='Type of learning rate scheduling. Currently supported: step')
     parser.add_argument('--gamma', default=0.3, type=float, help='Learning rate reduction after tau epochs.')
@@ -48,7 +56,7 @@ def get_basic_training_parameters(parser):
                         help='Flag. If set, no ImageNet pretraining is used to initialize the network.')
     parser.add_argument('--arch', default='resnet50_frozen_normalize', type=str,
                         help='Underlying network architecture. '
-                             'Frozen denotes that exisiting pretrained batchnorm layers are frozen, and '
+                             'Frozen denotes that existing pretrained batchnorm layers are frozen, and '
                              'normalize denotes normalization of the output embedding.')
 
     # Evaluation Parameters
@@ -235,3 +243,40 @@ def get_batch_creation_parameters(parser):
     parser.add_argument('--data_mb_lr', default=1, type=float, help='Deprecated.')
 
     return parser
+
+
+def get_feature_dataset_parameters(parser):
+    parser.add_argument('--feature_arch_path', default=['<path_to_your_feature_arch1>',
+                                                        '<path_to_your_feature_arch2>'], nargs='+',
+                        help='Underlying architectures for feature extraction. '
+                             'Description is same as arch.')
+    parser.add_argument('--feature_embed_dim', default=64, type=int,
+                        help='Embedding dimensionality of the architecture for feature extraction. '
+                             'Description is same as embed_dim, but for architecture for feature extraction.')
+    parser.add_argument('--feature_datasets', default=['cub200', 'cars196'], nargs='+',
+                        help='datasets for multiple dataset ensemble.')
+    parser.add_argument('--polling_strategy', default='batch_wise',
+                        type=str, choices=['batch_wise', 'dataset_wise'],
+                        help='Polling strategy that merges multiple datasets.')
+    parser.add_argument('--feature_lambda', default=1.0,
+                        type=float, help='Scalar to control the optimization strength between classification '
+                                         'and feature regression.')
+    parser.add_argument('--feature_indexes', default=[0, 64, 64, 128],
+                        nargs='+', help='Feature indices with <start, end> pair to locate the primary feature '
+                                        'dimension of each dataset.')
+    return parser
+
+
+def read_arguments_from_cmd():
+    parser = get_basic_parameters()
+
+    parser = get_basic_training_parameters(parser)
+    parser = get_batch_creation_parameters(parser)
+    parser = get_batchmining_specific_parameters(parser)
+    parser = get_loss_specific_parameters(parser)
+    parser = get_wandb_parameters(parser)
+
+    # for dataset fusion
+    parser = get_feature_dataset_parameters(parser)
+
+    return parser.parse_args()
