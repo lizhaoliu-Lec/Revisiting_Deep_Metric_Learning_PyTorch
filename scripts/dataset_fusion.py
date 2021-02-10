@@ -2,16 +2,18 @@ import os
 import time
 import numpy as np
 import torch.multiprocessing
+from torch.utils.data import DataLoader
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 import architectures as archs
 import batchminer as bmine
 import criteria as criteria
 import metric
-from utilities import logger
-from utilities import misc
-from scripts._share import set_seed, get_dataset_fusion_dataloaders, evaluate, \
-    train_dataset_fusion_one_epoch, evaluate_dataset_fusion
+from utilities import logger, misc
+import dataset
+from scripts._share import set_seed, get_dataset_fusion_dataloaders, \
+    train_dataset_fusion_one_epoch, evaluate_dataset_fusion, normalize_image, train_dataset_fusion_one_epoch_wo_feature
 from utilities.logger import get_time_string
 
 
@@ -64,7 +66,8 @@ def main(opt):
 
     name_to_log = {}
 
-    opt.save_path = opt.save_path + '/' + '-'.join(opt.feature_datasets) + '/' + opt.arch.upper() + get_time_string()
+    opt.save_path = opt.save_path + '/' + '-'.join(
+        opt.feature_datasets) + '/' + opt.arch.upper() + '-' + get_time_string()
     for dataset_name in name_to_dataloaders.keys():
         if dataset_name != 'joint_training':
             opt.savename = '{}_{}'.format(dataset_name, opt.arch.upper())
@@ -123,9 +126,14 @@ def main(opt):
                     train_data_sampler.full_storage_update(name_to_datasampler[dataset_name]['evaluation'], model,
                                                            opt.device)
 
-        train_dataset_fusion_one_epoch(opt, epoch, scheduler, name_to_datasampler,
-                                       name_to_dataloaders['joint_training'],
-                                       model, name_to_criterion, optimizer, name_to_log)
+        if not opt.feature_not_used:
+            train_dataset_fusion_one_epoch(opt, epoch, scheduler, name_to_datasampler,
+                                           name_to_dataloaders['joint_training'],
+                                           model, name_to_criterion, optimizer, name_to_log)
+        else:
+            train_dataset_fusion_one_epoch_wo_feature(opt, epoch, scheduler, name_to_datasampler,
+                                                      name_to_dataloaders['joint_training'],
+                                                      model, name_to_criterion, optimizer, name_to_log)
         evaluate_dataset_fusion(opt, epoch, model, name_to_dataloaders, metric_computer, name_to_log)
 
         print('Total Epoch Runtime: {0:4.2f}s'.format(time.time() - epoch_start_time))
@@ -192,3 +200,76 @@ def run_feature_dataset(par):
     #         # print("===> img_id", img_id)
     #     print("====> dataset_count\n", dataset_count)
     #     print('=====> Using %s to loop over all dataloader' % str(time.time() - t))
+
+
+@torch.no_grad()
+def visualization(opt):
+    # get pretrained model
+    model = archs.select(opt.arch, opt)
+
+    checkpoint = torch.load(opt.checkpoint_path)
+
+    model.load_state_dict(checkpoint['state_dict'])
+    model.eval()
+
+    model.cuda()
+
+    datasets = dataset.select(opt.dataset, opt, opt.source_path + '/' + opt.dataset)
+
+    dataloader = DataLoader(datasets['evaluation'], num_workers=opt.kernels,
+                            batch_size=opt.bs, shuffle=False)
+
+    data_iterator = tqdm(dataloader, desc='Evaluating dataset `%s`...' % opt.dataset)
+
+    features = []
+    images = []
+
+    for i, out in enumerate(data_iterator):
+
+        class_labels, x, input_indices = out
+
+        # Compute Embedding
+        model_args = {'x': x.cuda()}
+        # Needed for MixManifold settings.
+        if 'mix' in opt.arch:
+            model_args['labels'] = class_labels
+        embeds = model(**model_args)
+        if isinstance(embeds, tuple):
+            embeds, (_, _) = embeds
+
+        features.append(embeds.cpu())
+        images.append(x.cpu())
+
+        break
+
+    features = torch.cat(features, dim=0).numpy()
+    images = torch.cat(images, dim=0).numpy()
+
+    print('========> features.shape ', features.shape)
+    print('========> images.shape ', images.shape)
+
+    index = 0
+    for feature, image in tqdm(zip(features, images)):
+        image_normed = normalize_image(image)
+
+        plt.subplot(2, 1, 1)
+        plt.imshow(image_normed)
+        plt.axis('off')
+        plt.title('image')
+        plt.tight_layout()
+
+        plt.subplot(2, 1, 2)
+        plt.bar(range(len(feature)), feature)
+        plt.xlabel('feature index')
+        plt.ylabel('feature value')
+        plt.title('feature')
+        plt.tight_layout()
+        # plt.savefig("visualization_results/cub200_dataset_fusion/%d_overall.png" % index, dpi=300)
+        plt.savefig("visualization_results/cars196_dataset_fusion/%d_overall.png" % index, dpi=300)
+
+        plt.close()
+
+        index += 1
+
+        if index == 10:
+            break

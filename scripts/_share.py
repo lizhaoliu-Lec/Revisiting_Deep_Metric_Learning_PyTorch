@@ -296,6 +296,110 @@ def train_dataset_fusion_one_epoch(opt, epoch, scheduler, name_to_datasampler, d
         scheduler.step()
 
 
+def train_dataset_fusion_one_epoch_wo_feature(opt, epoch, scheduler, name_to_datasampler, dataloader, model,
+                                              name_to_criteria,
+                                              optimizer, name_to_log):
+    opt.epoch = epoch
+    # Scheduling Changes specifically for cosine scheduling
+    if opt.scheduler != 'none':
+        print('Running with learning rates {}...'.format(' | '.join('{}'.format(x) for x in scheduler.get_lr())))
+
+    for train_data_sampler in name_to_datasampler.values():
+        if train_data_sampler.requires_storage:
+            train_data_sampler.precompute_indices()
+
+    # Train one epoch
+    start = time.time()
+    model.train()
+
+    # loss_collect = []
+    dataset_idx_to_loss_collect = {i: [] for i in range(len(opt.feature_datasets))}
+    data_iterator = tqdm(dataloader, desc='Epoch {}/{} Training...'.format(epoch, opt.n_epochs))
+
+    name_to_loss_arg = {}
+    for dataset_name in opt.feature_datasets:
+        name_to_loss_arg[dataset_name] = {'batch': None, 'labels': None, 'batch_features': None, 'f_embed': None}
+
+    dataset_idx_to_dataset_name = {i: n for i, n in enumerate(opt.feature_datasets)}
+    assert len(opt.feature_datasets) * 2 == len(opt.feature_indexes)
+    feature_lambda = opt.feature_lambda
+
+    for i, out in enumerate(data_iterator):
+        global_steps = epoch * len(data_iterator) + i
+
+        dataset_idx, (class_labels, input, low_dim_features, input_indices) = out
+        dataset_name = dataset_idx_to_dataset_name[dataset_idx]
+
+        loss_args = name_to_loss_arg[dataset_name]
+        LOG = name_to_log[dataset_name]
+        train_data_sampler = name_to_datasampler[dataset_name]
+        criterion = name_to_criteria[dataset_name]
+
+        # Compute Embedding
+        input = input.to(opt.device)
+        model_args = {'x': input.to(opt.device)}
+        # Needed for MixManifold settings.
+        if 'mix' in opt.arch:
+            model_args['labels'] = class_labels
+        embeds = model(**model_args)
+        if isinstance(embeds, tuple):
+            embeds, (avg_features, features) = embeds
+            loss_args['batch_features'] = features
+
+        # Compute Loss
+        loss_args['batch'] = embeds
+        loss_args['labels'] = class_labels
+        loss_args['f_embed'] = model.model.last_linear
+        loss = criterion(**loss_args)
+
+        optimizer.zero_grad()
+        loss.backward()
+
+        # Compute Model Gradients and log them!
+        grads = np.concatenate(
+            [p.grad.detach().cpu().numpy().flatten() for p in model.parameters() if p.grad is not None])
+        grad_l2, grad_max = np.mean(np.sqrt(np.mean(np.square(grads)))), np.mean(np.max(np.abs(grads)))
+        LOG.progress_saver['Model Grad'].log('Grad L2', grad_l2, group='L2')
+        LOG.progress_saver['Model Grad'].log('Grad Max', grad_max, group='Max')
+        LOG.tensorboard.add_scalar(tag='Grad/L2', scalar_value=grad_l2, global_step=global_steps)
+        LOG.tensorboard.add_scalar(tag='Grad/Max', scalar_value=grad_max, global_step=global_steps)
+
+        # Update network weights!
+        optimizer.step()
+
+        dataset_idx_to_loss_collect[dataset_idx].append(loss.item())
+
+        if i == len(dataloader) - 1:
+            data_iterator.set_description(
+                'Epoch (Train: {3}) {0}/{1}: Mean Loss [{2:.4f}]'.format(
+                    epoch, opt.n_epochs,
+                    np.mean(dataset_idx_to_loss_collect[dataset_idx]),
+                    dataset_idx_to_dataset_name[dataset_idx]))
+
+        # A brilliant way to update embeddings!
+        if train_data_sampler.requires_storage and train_data_sampler.update_storage:
+            train_data_sampler.replace_storage_entries(embeds.detach().cpu(), input_indices)
+
+    for dataset_idx, dataset_name in dataset_idx_to_dataset_name.items():
+
+        result_metrics = {
+            'loss': np.mean(dataset_idx_to_loss_collect[dataset_idx]),
+        }
+
+        LOG = name_to_log[dataset_name]
+
+        LOG.progress_saver['Train'].log('epochs', epoch)
+        for metric_name, metric_val in result_metrics.items():
+            LOG.progress_saver['Train'].log(metric_name, metric_val)
+            LOG.tensorboard.add_scalar(tag='Train/%s' % metric_name, scalar_value=metric_val, global_step=epoch)
+        LOG.progress_saver['Train'].log('time', np.round(time.time() - start, 4))
+        LOG.tensorboard.add_scalar(tag='Train/time', scalar_value=np.round(time.time() - start, 4), global_step=epoch)
+
+    # Learning Rate Scheduling Step
+    if opt.scheduler != 'none':
+        scheduler.step()
+
+
 @torch.no_grad()
 def evaluate_dataset_fusion(opt, epoch, model, name_to_dataloaders, metric_computer, name_to_log):
     for dataset_name in opt.feature_datasets:
@@ -319,3 +423,9 @@ def evaluate(opt, epoch, model, dataloaders, metric_computer, LOG):
                   opt.device, log_key='Train')
 
     LOG.update(update_all=True)
+
+
+def normalize_image(x):
+    x = np.transpose(x, (1, 2, 0))
+    x = (x - np.min(x)) / (np.max(x) - np.min(x))
+    return (x * 255).astype(np.uint8)

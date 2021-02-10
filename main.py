@@ -22,3 +22,5 @@ if __name__ == '__main__':
     if training_type == 'dataset_fusion':
         dataset_fusion.main(par)
         # dataset_fusion.run_feature_dataset(par)
+    if training_type == 'dataset_fusion_visualization':
+        dataset_fusion.visualization(par)

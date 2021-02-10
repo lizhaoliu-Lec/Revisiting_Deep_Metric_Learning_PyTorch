@@ -264,6 +264,14 @@ def get_feature_dataset_parameters(parser):
     parser.add_argument('--feature_indexes', default=[0, 64, 64, 128],
                         nargs='+', help='Feature indices with <start, end> pair to locate the primary feature '
                                         'dimension of each dataset.')
+    parser.add_argument('--feature_not_used', action='store_true',
+                        help='Flag. If set, no feature is used to train the network.')
+    return parser
+
+
+def get_visualization_parameters(parser):
+    parser.add_argument('--checkpoint_path', default='<path_to_your_arch>', type=str,
+                        help='Checkpoint path to load the model for visualization.')
     return parser
 
 
@@ -278,5 +286,8 @@ def read_arguments_from_cmd():
 
     # for dataset fusion
     parser = get_feature_dataset_parameters(parser)
+
+    # for visualization
+    parser = get_visualization_parameters(parser)
 
     return parser.parse_args()
