@@ -207,7 +207,7 @@ def visualization(opt):
     # get pretrained model
     model = archs.select(opt.arch, opt)
 
-    checkpoint = torch.load(opt.checkpoint_path)
+    checkpoint = torch.load(opt.visualization_checkpoint_path)
 
     model.load_state_dict(checkpoint['state_dict'])
     model.eval()
@@ -245,8 +245,7 @@ def visualization(opt):
     features = torch.cat(features, dim=0).numpy()
     images = torch.cat(images, dim=0).numpy()
 
-    print('========> features.shape ', features.shape)
-    print('========> images.shape ', images.shape)
+    save_dir = opt.visualization_save_dir
 
     index = 0
     for feature, image in tqdm(zip(features, images)):
@@ -264,8 +263,7 @@ def visualization(opt):
         plt.ylabel('feature value')
         plt.title('feature')
         plt.tight_layout()
-        # plt.savefig("visualization_results/cub200_dataset_fusion/%d_overall.png" % index, dpi=300)
-        plt.savefig("visualization_results/cars196_dataset_fusion/%d_overall.png" % index, dpi=300)
+        plt.savefig("%s/%d_overall.png" % (save_dir, index), dpi=300)
 
         plt.close()
 

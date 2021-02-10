@@ -270,8 +270,10 @@ def get_feature_dataset_parameters(parser):
 
 
 def get_visualization_parameters(parser):
-    parser.add_argument('--checkpoint_path', default='<path_to_your_arch>', type=str,
+    parser.add_argument('--visualization_checkpoint_path', default='<path_to_your_arch>', type=str,
                         help='Checkpoint path to load the model for visualization.')
+    parser.add_argument('--visualization_save_dir', default='<path_to_save_vis_result>', type=str,
+                        help='Path to save the visualization result.')
     return parser
 
 
