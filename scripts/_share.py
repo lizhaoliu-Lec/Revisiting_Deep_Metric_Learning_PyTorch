@@ -3,6 +3,7 @@ import time
 import numpy as np
 import torch.multiprocessing
 from torch.utils.data import DataLoader
+import torch.nn as nn
 from tqdm import tqdm
 
 import datasampler as dsamplers
@@ -93,7 +94,8 @@ def get_dataset_fusion_dataloaders(opt, model):
     return name_to_dataloaders, name_to_datasampler
 
 
-def train_one_epoch(opt, epoch, scheduler, train_data_sampler, dataloader, model, criterion, optimizer, LOG):
+def train_one_epoch(opt, epoch, scheduler, train_data_sampler, dataloader, model, criterion, optimizer, LOG,
+                    feature_penalty=None):
     opt.epoch = epoch
     # Scheduling Changes specifically for cosine scheduling
     if opt.scheduler != 'none':
@@ -125,7 +127,12 @@ def train_one_epoch(opt, epoch, scheduler, train_data_sampler, dataloader, model
         embeds = model(**model_args)
         if isinstance(embeds, tuple):
             embeds, (avg_features, features) = embeds
+            # if feature_penalty is not None:
+            #     features = feature_penalty(features, epoch)
             loss_args['batch_features'] = features
+
+        if feature_penalty is not None:
+            embeds = feature_penalty(embeds, epoch)
 
         # Compute Loss
         loss_args['batch'] = embeds
@@ -429,3 +436,95 @@ def normalize_image(x):
     x = np.transpose(x, (1, 2, 0))
     x = (x - np.min(x)) / (np.max(x) - np.min(x))
     return (x * 255).astype(np.uint8)
+
+
+class FeaturePenalty(nn.Module):
+    def __init__(self, total_dimension, total_epoch, reverse=False, base=8):
+        super(FeaturePenalty, self).__init__()
+        self.total_dimension = total_dimension
+
+        self.total_epoch = total_epoch
+        self.base = base
+        self.reverse = reverse
+
+        self.encountered_epoch = []
+
+        print("[FeaturePenalty] Start training with feature_dim = %d and reverse = %d" % (self.base, self.reverse))
+
+        self.batchIdToEndIndex = self.get_batchIdToEndIndex(total_dimension, total_epoch, base, reverse=reverse)
+
+    @staticmethod
+    def get_batchIdToEndIndex(total_dimension, total_epoch, base, reverse=False):
+        # example dim: 64, epoch: 150, base: 8
+        batchIdToEndIndex = {}
+        num_expand = total_dimension // base
+        to_expand = total_epoch // num_expand
+        # print("====> num_expand ", num_expand)
+        # print("====> to_expand ", to_expand)
+        dim = base
+        for epoch in range(total_epoch):
+            if epoch % to_expand == 0 and epoch != 0 and dim < total_dimension:
+                # print("====> epoch: ", epoch)
+                dim += base
+            if not reverse:
+                batchIdToEndIndex[epoch] = dim
+            else:
+                batchIdToEndIndex[total_epoch - epoch - 1] = dim
+
+        # print("=====> batchIdToEndIndex:\n", batchIdToEndIndex)
+
+        return batchIdToEndIndex
+
+    @staticmethod
+    def mask_feature_by_endIndex(batch_feature, end_index):
+        # batch_feature[:, end_index:] = batch_feature[:, end_index:] * 0
+
+        batch_size, feature_size = batch_feature.size()
+
+        batch_ones = torch.ones((batch_size, end_index), device=batch_feature.device, requires_grad=False)
+        batch_zeros = torch.zeros((batch_size, feature_size - end_index), device=batch_feature.device,
+                                  requires_grad=False)
+        # print("====> batch_ones.size() ", batch_ones.size())
+        # print("====> batch_zeros.size() ", batch_zeros.size())
+
+        batch_masks = torch.cat([batch_ones, batch_zeros], dim=1)
+        # print("====> batch_masks.size() ", batch_masks.size())
+
+        return batch_feature * batch_masks
+
+    def forward(self, batch_feature, epoch):
+        # print("====> epoch ", epoch)
+        if epoch not in self.encountered_epoch:
+            self.encountered_epoch.append(epoch)
+            if 0 < epoch < len(self.batchIdToEndIndex) - 1 and \
+                    self.batchIdToEndIndex[epoch - 1] != self.batchIdToEndIndex[epoch]:
+                print("[FeaturePenalty] Changing feature_dim from %d to %d for epoch %d" % (
+                    self.batchIdToEndIndex[epoch - 1],
+                    self.batchIdToEndIndex[epoch], epoch))
+            else:
+                print("[FeaturePenalty] Using feature_dim %d for epoch %d" % (self.batchIdToEndIndex[epoch], epoch))
+
+        return self.mask_feature_by_endIndex(batch_feature, self.batchIdToEndIndex[epoch])
+
+
+if __name__ == '__main__':
+    def run_feature_penalty():
+        import torch
+
+        total_dimension, total_epoch, base = 32, 150, 2
+
+        feature_penalty = FeaturePenalty(total_dimension=total_dimension, total_epoch=total_epoch, base=base,
+                                         reverse=True)
+
+        for epoch in range(1, total_epoch):
+            batch_features = torch.randn((1, total_dimension))
+            batch_features = feature_penalty(batch_features, epoch)
+            print("====> batch_features ", batch_features)
+
+
+    def run_batchIdToEndIndex():
+        FeaturePenalty.get_batchIdToEndIndex(64, 150, 8, reverse=True)
+
+
+    run_feature_penalty()
+    # run_batchIdToEndIndex()

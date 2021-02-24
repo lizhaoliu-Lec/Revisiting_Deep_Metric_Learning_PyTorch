@@ -9,7 +9,7 @@ import criteria as criteria
 import metric
 from utilities import logger
 from utilities import misc
-from scripts._share import set_seed, get_dataloaders, train_one_epoch, evaluate
+from scripts._share import set_seed, get_dataloaders, train_one_epoch, evaluate, FeaturePenalty
 
 
 def main(opt):
@@ -104,6 +104,12 @@ def main(opt):
     print(summary)
 
     # SCRIPT MAIN
+    feature_penalty = None
+    if opt.feature_penalty_used:
+        feature_penalty = FeaturePenalty(total_dimension=opt.embed_dim,
+                                         total_epoch=opt.n_epochs,
+                                         base=opt.feature_penalty_base,
+                                         reverse=opt.feature_penalty_reversed)
 
     for epoch in range(opt.n_epochs):
         epoch_start_time = time.time()
@@ -112,7 +118,7 @@ def main(opt):
             train_data_sampler.full_storage_update(dataloaders['evaluation'], model, opt.device)
 
         train_one_epoch(opt, epoch, scheduler, train_data_sampler, dataloaders['training'],
-                        model, criterion, optimizer, LOG)
+                        model, criterion, optimizer, LOG, feature_penalty=feature_penalty)
         evaluate(opt, epoch, model, dataloaders, metric_computer, LOG)
 
         print('Total Epoch Runtime: {0:4.2f}s'.format(time.time() - epoch_start_time))

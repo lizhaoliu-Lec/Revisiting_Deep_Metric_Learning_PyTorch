@@ -277,6 +277,16 @@ def get_visualization_parameters(parser):
     return parser
 
 
+def get_feature_penalty_parameters(parser):
+    parser.add_argument('--feature_penalty_used', action='store_true',
+                        help='Flag. If set, feature penalty is used to train the network.')
+    parser.add_argument('--feature_penalty_base', default=64, type=int,
+                        help='Base dimension to expand during feature penalty.')
+    parser.add_argument('--feature_penalty_reversed', action='store_true',
+                        help='Whether to reverse the feature penalty process.')
+    return parser
+
+
 def read_arguments_from_cmd():
     parser = get_basic_parameters()
 
@@ -291,5 +301,8 @@ def read_arguments_from_cmd():
 
     # for visualization
     parser = get_visualization_parameters(parser)
+
+    # for feature penalty
+    parser = get_feature_penalty_parameters(parser)
 
     return parser.parse_args()
