@@ -439,7 +439,11 @@ def normalize_image(x):
 
 
 class FeaturePenalty(nn.Module):
-    def __init__(self, total_dimension, total_epoch, reverse=False, base=8):
+    def __init__(self, total_dimension, total_epoch, reverse=False, base=8, start_dimension=None, rescale=False):
+        assert total_dimension % base == 0, 'total_dimension must be totally split by base'
+        if start_dimension is not None:
+            assert total_dimension >= start_dimension, 'start_dimension must be smaller or equal to total_dimension'
+
         super(FeaturePenalty, self).__init__()
         self.total_dimension = total_dimension
 
@@ -447,23 +451,34 @@ class FeaturePenalty(nn.Module):
         self.base = base
         self.reverse = reverse
 
+        self.start_dimension = start_dimension if start_dimension is not None else self.base
+        self.rescale = rescale
+
         self.encountered_epoch = []
 
-        print("[FeaturePenalty] Start training with feature_dim = %d and reverse = %d" % (self.base, self.reverse))
+        print(
+            "[FeaturePenalty] Start training with "
+            "(total_dimension, start_dimension, base, reverse, rescale) = (%d, %d, %d, %d, %d)"
+            % (self.total_dimension, self.start_dimension, self.base, self.reverse, self.rescale))
 
-        self.batchIdToEndIndex = self.get_batchIdToEndIndex(total_dimension, total_epoch, base, reverse=reverse)
+        self.batchIdToEndIndex = self.get_batchIdToEndIndex(total_dimension, total_epoch, base,
+                                                            reverse=reverse,
+                                                            start_dimension=self.start_dimension)
 
     @staticmethod
-    def get_batchIdToEndIndex(total_dimension, total_epoch, base, reverse=False):
+    def get_batchIdToEndIndex(total_dimension, total_epoch, base, reverse=False, start_dimension=None):
         # example dim: 64, epoch: 150, base: 8
         batchIdToEndIndex = {}
-        num_expand = total_dimension // base
+        start_dimension = base if start_dimension is None else start_dimension
+        # print("=====> start_dimension ", start_dimension)
+        num_expand = (total_dimension - start_dimension) // base
         to_expand = total_epoch // num_expand
         # print("====> num_expand ", num_expand)
         # print("====> to_expand ", to_expand)
-        dim = base
+        dim = start_dimension
         for epoch in range(total_epoch):
-            if epoch % to_expand == 0 and epoch != 0 and dim < total_dimension:
+            # if epoch % to_expand == 0 and epoch != 0 and dim < total_dimension:
+            if epoch % to_expand == 0 and epoch != 0:
                 # print("====> epoch: ", epoch)
                 dim += base
             if not reverse:
@@ -476,7 +491,7 @@ class FeaturePenalty(nn.Module):
         return batchIdToEndIndex
 
     @staticmethod
-    def mask_feature_by_endIndex(batch_feature, end_index):
+    def mask_feature_by_endIndex(batch_feature, end_index, scale_factor=1.0):
         # batch_feature[:, end_index:] = batch_feature[:, end_index:] * 0
 
         batch_size, feature_size = batch_feature.size()
@@ -488,9 +503,9 @@ class FeaturePenalty(nn.Module):
         # print("====> batch_zeros.size() ", batch_zeros.size())
 
         batch_masks = torch.cat([batch_ones, batch_zeros], dim=1)
-        # print("====> batch_masks.size() ", batch_masks.size())
 
-        return batch_feature * batch_masks
+        # print("====> batch_masks.size() ", batch_masks.size())
+        return scale_factor * batch_feature * batch_masks
 
     def forward(self, batch_feature, epoch):
         # print("====> epoch ", epoch)
@@ -504,17 +519,18 @@ class FeaturePenalty(nn.Module):
             else:
                 print("[FeaturePenalty] Using feature_dim %d for epoch %d" % (self.batchIdToEndIndex[epoch], epoch))
 
-        return self.mask_feature_by_endIndex(batch_feature, self.batchIdToEndIndex[epoch])
+        scale_factor = 1.0 if not self.rescale else self.total_dimension / self.batchIdToEndIndex[epoch]
+        return self.mask_feature_by_endIndex(batch_feature, self.batchIdToEndIndex[epoch], scale_factor)
 
 
 if __name__ == '__main__':
     def run_feature_penalty():
         import torch
 
-        total_dimension, total_epoch, base = 32, 150, 2
+        total_dimension, total_epoch, base, start_dimension = 128, 150, 8, 64
 
         feature_penalty = FeaturePenalty(total_dimension=total_dimension, total_epoch=total_epoch, base=base,
-                                         reverse=True)
+                                         reverse=True, start_dimension=start_dimension, rescale=True)
 
         for epoch in range(1, total_epoch):
             batch_features = torch.randn((1, total_dimension))
@@ -523,8 +539,40 @@ if __name__ == '__main__':
 
 
     def run_batchIdToEndIndex():
-        FeaturePenalty.get_batchIdToEndIndex(64, 150, 8, reverse=True)
+        # FeaturePenalty.get_batchIdToEndIndex(64, 150, 8, reverse=True)
+        FeaturePenalty.get_batchIdToEndIndex(32, 150, 2, reverse=True, start_dimension=8)
+
+
+    def plot_feature_penalty():
+        total_dimension, total_epoch, base, start_dimension = 128, 150, 8, None
+        feature_penalty_1 = FeaturePenalty(total_dimension=total_dimension, total_epoch=total_epoch, base=base,
+                                           reverse=True, start_dimension=start_dimension)
+        total_dimension, total_epoch, base, start_dimension = 128, 150, 8, 64
+        feature_penalty_2 = FeaturePenalty(total_dimension=total_dimension, total_epoch=total_epoch, base=base,
+                                           reverse=True, start_dimension=start_dimension)
+        total_dimension, total_epoch, base, start_dimension = 128, 150, 16, 64
+        feature_penalty_3 = FeaturePenalty(total_dimension=total_dimension, total_epoch=total_epoch, base=base,
+                                           reverse=True, start_dimension=start_dimension)
+        import matplotlib.pyplot as plt
+        x = []
+        y1 = []
+        y2 = []
+        y3 = []
+        for i in range(total_epoch):
+            x.append(i)
+            y1.append(feature_penalty_1.batchIdToEndIndex[i])
+            y2.append(feature_penalty_2.batchIdToEndIndex[i])
+            y3.append(feature_penalty_3.batchIdToEndIndex[i])
+
+        plt.plot(x, y1, label='old')
+        plt.plot(x, y2, label='new')
+        plt.plot(x, y3, label='to run')
+        plt.xlabel('epoch')
+        plt.ylabel('dim')
+        plt.legend()
+        plt.show()
 
 
     run_feature_penalty()
     # run_batchIdToEndIndex()
+    # plot_feature_penalty()

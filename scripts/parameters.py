@@ -280,10 +280,14 @@ def get_visualization_parameters(parser):
 def get_feature_penalty_parameters(parser):
     parser.add_argument('--feature_penalty_used', action='store_true',
                         help='Flag. If set, feature penalty is used to train the network.')
-    parser.add_argument('--feature_penalty_base', default=64, type=int,
+    parser.add_argument('--feature_penalty_base', default=8, type=int,
                         help='Base dimension to expand during feature penalty.')
     parser.add_argument('--feature_penalty_reversed', action='store_true',
                         help='Whether to reverse the feature penalty process.')
+    parser.add_argument('--feature_penalty_start_dimension', default=64, type=int,
+                        help='Start dimension to expand during feature penalty.')
+    parser.add_argument('--feature_penalty_rescale', action='store_true',
+                        help='Whether to rescale the masked features during the feature penalty process.')
     return parser
 
 

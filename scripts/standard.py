@@ -109,7 +109,9 @@ def main(opt):
         feature_penalty = FeaturePenalty(total_dimension=opt.embed_dim,
                                          total_epoch=opt.n_epochs,
                                          base=opt.feature_penalty_base,
-                                         reverse=opt.feature_penalty_reversed)
+                                         reverse=opt.feature_penalty_reversed,
+                                         start_dimension=opt.feature_penalty_start_dimension,
+                                         rescale=opt.feature_penalty_rescale)
 
     for epoch in range(opt.n_epochs):
         epoch_start_time = time.time()
