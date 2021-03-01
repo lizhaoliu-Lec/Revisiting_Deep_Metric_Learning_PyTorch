@@ -439,7 +439,8 @@ def normalize_image(x):
 
 
 class FeaturePenalty(nn.Module):
-    def __init__(self, total_dimension, total_epoch, reverse=False, base=8, start_dimension=None, rescale=False):
+    def __init__(self, total_dimension, total_epoch, reverse=False, base=8,
+                 start_dimension=None, rescale=False, topK=False):
         assert total_dimension % base == 0, 'total_dimension must be totally split by base'
         if start_dimension is not None:
             assert total_dimension >= start_dimension, 'start_dimension must be smaller or equal to total_dimension'
@@ -453,13 +454,11 @@ class FeaturePenalty(nn.Module):
 
         self.start_dimension = start_dimension if start_dimension is not None else self.base
         self.rescale = rescale
+        self.topK = topK
 
         self.encountered_epoch = []
 
-        print(
-            "[FeaturePenalty] Start training with "
-            "(total_dimension, start_dimension, base, reverse, rescale) = (%d, %d, %d, %d, %d)"
-            % (self.total_dimension, self.start_dimension, self.base, self.reverse, self.rescale))
+        print(self)
 
         self.batchIdToEndIndex = self.get_batchIdToEndIndex(total_dimension, total_epoch, base,
                                                             reverse=reverse,
@@ -491,18 +490,27 @@ class FeaturePenalty(nn.Module):
         return batchIdToEndIndex
 
     @staticmethod
-    def mask_feature_by_endIndex(batch_feature, end_index, scale_factor=1.0):
+    def mask_feature_by_endIndex(batch_feature, end_index, scale_factor=1.0, topK=False):
         # batch_feature[:, end_index:] = batch_feature[:, end_index:] * 0
 
         batch_size, feature_size = batch_feature.size()
 
-        batch_ones = torch.ones((batch_size, end_index), device=batch_feature.device, requires_grad=False)
-        batch_zeros = torch.zeros((batch_size, feature_size - end_index), device=batch_feature.device,
-                                  requires_grad=False)
-        # print("====> batch_ones.size() ", batch_ones.size())
-        # print("====> batch_zeros.size() ", batch_zeros.size())
+        if not topK:
+            batch_ones = torch.ones((batch_size, end_index), device=batch_feature.device, requires_grad=False)
+            batch_zeros = torch.zeros((batch_size, feature_size - end_index), device=batch_feature.device,
+                                      requires_grad=False)
+            # print("====> batch_ones.size() ", batch_ones.size())
+            # print("====> batch_zeros.size() ", batch_zeros.size())
 
-        batch_masks = torch.cat([batch_ones, batch_zeros], dim=1)
+            batch_masks = torch.cat([batch_ones, batch_zeros], dim=1)
+        else:
+            topK_indices = torch.topk(torch.abs(batch_feature), end_index, dim=1, sorted=False)[1]
+            # print("===> topK_indices.size() ", topK_indices.size())
+            # print("===> topK_indices ", topK_indices)
+            rang = torch.arange(batch_feature.size(0)).reshape((-1, 1)).to(batch_feature.device)
+            batch_masks = torch.zeros_like(batch_feature)
+            batch_masks[rang, topK_indices] = 1.0
+            # print("====> batch_masks\n", batch_masks)
 
         # print("====> batch_masks.size() ", batch_masks.size())
         return scale_factor * batch_feature * batch_masks
@@ -520,7 +528,13 @@ class FeaturePenalty(nn.Module):
                 print("[FeaturePenalty] Using feature_dim %d for epoch %d" % (self.batchIdToEndIndex[epoch], epoch))
 
         scale_factor = 1.0 if not self.rescale else self.total_dimension / self.batchIdToEndIndex[epoch]
-        return self.mask_feature_by_endIndex(batch_feature, self.batchIdToEndIndex[epoch], scale_factor)
+        return self.mask_feature_by_endIndex(batch_feature, self.batchIdToEndIndex[epoch],
+                                             scale_factor, topK=self.topK)
+
+    def __repr__(self):
+        return 'FeaturePenalty(' \
+               'total_dimension={total_dimension}, start_dimension={start_dimension}, ' \
+               'base={base}, reverse={reverse}, rescale={rescale}, topK={topK})'.format(**self.__dict__)
 
 
 if __name__ == '__main__':
@@ -530,7 +544,7 @@ if __name__ == '__main__':
         total_dimension, total_epoch, base, start_dimension = 128, 150, 8, 64
 
         feature_penalty = FeaturePenalty(total_dimension=total_dimension, total_epoch=total_epoch, base=base,
-                                         reverse=True, start_dimension=start_dimension, rescale=True)
+                                         reverse=True, start_dimension=start_dimension, rescale=True, topK=True)
 
         for epoch in range(1, total_epoch):
             batch_features = torch.randn((1, total_dimension))
@@ -572,7 +586,27 @@ if __name__ == '__main__':
         plt.legend()
         plt.show()
 
+    def run_topK():
+        data = [[3, 5, 1, 7], [3, 8, 4, 9]]
+        tensor = torch.tensor(data)
+        ind = torch.topk(tensor, 2, dim=1)[1]
+        print("===> ind: ", ind)
+        rang = torch.arange(tensor.size(0)).reshape((-1, 1))
+        print("===> rang: ", rang)
+        ret = tensor[[[0], [1]], ind]
+        print("===> ret: ", ret)
+        tensor[[[0], [1]], ind] = -1000
+        print("===> tensor: ", tensor)
+        # ret = tensor[0, ind[0]]
+        # print("===> ret: ", ret)
+        # ret = tensor[1, ind[1]]
+        # print("===> ret: ", ret)
+        # tensor[1, ind[1]] = -1000000
+        # ret = tensor[1, ind[1]]
+        # print("===> ret: ", ret)
+        # print("===> tensor: ", tensor)
 
     run_feature_penalty()
     # run_batchIdToEndIndex()
     # plot_feature_penalty()
+    # run_topK()

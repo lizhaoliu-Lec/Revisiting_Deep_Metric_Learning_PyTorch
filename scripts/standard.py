@@ -111,7 +111,8 @@ def main(opt):
                                          base=opt.feature_penalty_base,
                                          reverse=opt.feature_penalty_reversed,
                                          start_dimension=opt.feature_penalty_start_dimension,
-                                         rescale=opt.feature_penalty_rescale)
+                                         rescale=opt.feature_penalty_rescale,
+                                         topK=opt.feature_penalty_topK)
 
     for epoch in range(opt.n_epochs):
         epoch_start_time = time.time()

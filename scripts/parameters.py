@@ -288,6 +288,8 @@ def get_feature_penalty_parameters(parser):
                         help='Start dimension to expand during feature penalty.')
     parser.add_argument('--feature_penalty_rescale', action='store_true',
                         help='Whether to rescale the masked features during the feature penalty process.')
+    parser.add_argument('--feature_penalty_topK', action='store_true',
+                        help='Whether to rescale the remain topK features during the feature penalty process.')
     return parser
 
 
