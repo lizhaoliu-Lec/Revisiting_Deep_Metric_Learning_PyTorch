@@ -17,6 +17,8 @@ if __name__ == '__main__':
 
     training_type = par.training_script
 
+    print("** Training with `training_type = %s` **", training_type)
+
     if training_type == 'standard':
         standard.main(par)
     if training_type == 'dataset_fusion':

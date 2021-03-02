@@ -8,7 +8,7 @@ from utilities.logger import LOGGER
 
 
 def evaluate(LOG: LOGGER, metric_computer, dataloader, model, opt, eval_types, device,
-             aux_store=None, make_recall_plot=False, log_key='Test'):
+             aux_store=None, make_recall_plot=False, log_key='Test', criteria=None):
     """
     Parent-Function to compute evaluation metric, print summary string and
     store checkpoint files/plot sample recall plots.
@@ -46,8 +46,13 @@ def evaluate(LOG: LOGGER, metric_computer, dataloader, model, opt, eval_types, d
                 print('Saved weights for best {}: {}\n'.format(log_key, parent_metric))
                 set_checkpoint(model, opt, LOG.progress_saver,
                                LOG.save_path + '/checkpoint_{}_{}_{}.pth.tar'.format(log_key, eval_type,
-                                                                                          storage_metric),
+                                                                                     storage_metric),
                                aux=aux_store)
+                if criteria is not None:
+                    set_checkpoint(criteria, opt, LOG.progress_saver,
+                                   LOG.save_path + '/criteria_checkpoint_{}_{}_{}.pth.tar'.format(log_key, eval_type,
+                                                                                                  storage_metric),
+                                   aux=aux_store)
 
     if opt.log_online:
         for eval_type in histogram_metrics.keys():
