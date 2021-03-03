@@ -1,6 +1,7 @@
 from scripts.parameters import read_arguments_from_cmd
 from scripts import standard
 from scripts import dataset_fusion
+from scripts import classifier_fusion
 
 import torch
 import matplotlib
@@ -17,7 +18,7 @@ if __name__ == '__main__':
 
     training_type = par.training_script
 
-    print("** Training with `training_type = %s` **", training_type)
+    print("** Training with `training_type = %s` **" % training_type)
 
     if training_type == 'standard':
         standard.main(par)
@@ -26,3 +27,5 @@ if __name__ == '__main__':
         # dataset_fusion.run_feature_dataset(par)
     if training_type == 'dataset_fusion_visualization':
         dataset_fusion.visualization(par)
+    if training_type == 'classifier_fusion':
+        classifier_fusion.main(par)

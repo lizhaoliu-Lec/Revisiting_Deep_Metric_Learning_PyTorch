@@ -2,18 +2,14 @@ import os
 import time
 import numpy as np
 import torch.multiprocessing
-from torch.utils.data import DataLoader
-from tqdm import tqdm
-import matplotlib.pyplot as plt
 
 import architectures as archs
 import batchminer as bmine
 import criteria as criteria
 import metric
 from utilities import logger, misc
-import dataset
-from scripts._share import set_seed, get_dataset_fusion_dataloaders, \
-    train_dataset_fusion_one_epoch, evaluate_dataset_fusion, normalize_image, train_dataset_fusion_one_epoch_wo_feature
+from scripts._share import set_seed, get_dataset_fusion_dataloaders, evaluate_dataset_fusion, \
+    train_dataset_fusion_one_epoch_wo_feature
 from utilities.logger import get_time_string
 
 
@@ -57,7 +53,8 @@ def main(opt):
     model.to(opt.device)
 
     # DATALOADER SETUPS
-    name_to_dataloaders, name_to_datasampler = get_dataset_fusion_dataloaders(opt, model)
+    name_to_dataloaders, name_to_datasampler = get_dataset_fusion_dataloaders(opt, model,
+                                                                              opt.classifier_fusion_datasets)
 
     # CREATE LOGGING FILES
     sub_loggers = ['Train', 'Test', 'Model Grad']
@@ -67,21 +64,47 @@ def main(opt):
     name_to_log = {}
 
     opt.save_path = opt.save_path + '/' + '-'.join(
-        opt.feature_datasets) + '/' + opt.arch.upper() + '-' + get_time_string()
+        opt.classifier_fusion_datasets) + '/' + opt.arch.upper() + '-' + get_time_string()
     for dataset_name in name_to_dataloaders.keys():
         if dataset_name != 'joint_training':
             opt.savename = '{}_{}'.format(dataset_name, opt.arch.upper())
             name_to_log[dataset_name] = logger.LOGGER(opt, sub_loggers=sub_loggers, start_new=True,
                                                       log_online=opt.log_online)
 
+    # dataset name to index
+    dataset_name_2_index = {}
+    for index in range(len(opt.classifier_fusion_datasets)):
+        dataset_name_2_index[opt.classifier_fusion_datasets[index]] = index
+
+    dataset_idx_to_cls_indexes = {i: (opt.classifier_fusion_indexes[i * 2],
+                                      opt.classifier_fusion_indexes[i * 2 + 1])
+                                  for i in range(len(opt.feature_datasets))}
+
     # LOSS SETUP
     batchminer = bmine.select(opt.batch_mining, opt)
     name_to_criterion = {}
+    embed_dim = opt.embed_dim
     for dataset_name in name_to_dataloaders.keys():
         if dataset_name != 'joint_training':
             opt.dataset = dataset_name
             opt.n_classes = len(name_to_dataloaders[dataset_name]['training'].dataset.avail_classes)
+
+            # create low cls
+            opt.embed_dim = opt.classifier_fusion_dim
+            low_criterion, _ = criteria.select(opt.loss, opt, to_optim, batchminer)
+            opt.embed_dim = embed_dim
+
+            # load low cls
+            checkpoint = torch.load(opt.classifier_fusion_path[dataset_name_2_index[dataset_name]])
+            low_criterion.load_state_dict(checkpoint['state_dict'])
+
             criterion, to_optim = criteria.select(opt.loss, opt, to_optim, batchminer)
+
+            # merge low cls
+            start_index, end_index = dataset_idx_to_cls_indexes[dataset_name_2_index[dataset_name]]
+            criterion.load_low_dimensional_classifier(low_criterion, start_index, end_index,
+                                                      not opt.classifier_fusion_not_freeze)
+
             criterion.to(opt.device)
             name_to_criterion[dataset_name] = criterion
 
@@ -126,18 +149,12 @@ def main(opt):
                     train_data_sampler.full_storage_update(name_to_datasampler[dataset_name]['evaluation'], model,
                                                            opt.device)
 
-        if not opt.feature_not_used:
-            train_dataset_fusion_one_epoch(opt, epoch, scheduler, name_to_datasampler,
-                                           name_to_dataloaders['joint_training'],
-                                           model, name_to_criterion, optimizer, name_to_log,
-                                           datasets=opt.feature_datasets)
-        else:
-            train_dataset_fusion_one_epoch_wo_feature(opt, epoch, scheduler, name_to_datasampler,
-                                                      name_to_dataloaders['joint_training'],
-                                                      model, name_to_criterion, optimizer, name_to_log,
-                                                      datasets=opt.feature_datasets)
+        train_dataset_fusion_one_epoch_wo_feature(opt, epoch, scheduler, name_to_datasampler,
+                                                  name_to_dataloaders['joint_training'],
+                                                  model, name_to_criterion, optimizer, name_to_log,
+                                                  datasets=opt.classifier_fusion_datasets)
         evaluate_dataset_fusion(opt, epoch, model, name_to_dataloaders, metric_computer, name_to_log,
-                                datasets=opt.feature_datasets)
+                                datasets=opt.classifier_fusion_datasets)
 
         print('Total Epoch Runtime: {0:4.2f}s'.format(time.time() - epoch_start_time))
 
@@ -153,124 +170,3 @@ def main(opt):
 
         with open(opt.save_path + '/%s_training_summary.txt' % dataset_name, 'w') as summary_file:
             summary_file.write(summary_text)
-
-
-def run_feature_dataset(par):
-    from dataset import cub200, cars196
-    from dataset.feature_dataset import FeatureDataset
-    from dataset.concat_dataloader import ConcatDataloader
-
-    print("====> type(par.feature_datasets) ", type(par.feature_datasets))
-    print("====> par.feature_datasets ", par.feature_datasets)
-
-    # par.dataset_idx = 0
-    # datasets_cub200 = cub200.get_dataset(opt=par,
-    #                                      data_path=par.source_path + '/' + par.feature_datasets[par.dataset_idx],
-    #                                      TrainDatasetClass=FeatureDataset)
-    #
-    # par.dataset_idx = 1
-    # datasets_cars196 = cars196.get_dataset(opt=par,
-    #                                        data_path=par.source_path + '/' + par.feature_datasets[par.dataset_idx],
-    #                                        TrainDatasetClass=FeatureDataset)
-    # dataloader = ConcatDataloader([datasets_cub200['training'],
-    #                                datasets_cars196['training']],
-    #                               polling_strategy=par.polling_strategy,
-    #                               num_workers=par.kernels, batch_size=par.bs,
-    #                               shuffle=False, drop_last=False)
-    # # dataloader.test_loader_len()
-    # #
-    # # dataloader.test_loader_next_long()
-    #
-    # # tqdm_dataloader = dataloader
-    # for ttt in range(3):
-    #     tqdm_dataloader = tqdm(dataloader)
-    #     # tqdm_dataloader = dataloader
-    #     import time
-    #     t = time.time()
-    #     print("====> starting for the %d times" % ttt)
-    #     print("======> len(dataloader) ", len(dataloader))
-    #     dataset_count = {0: 0, 1: 0}
-    #     for i, data in enumerate(tqdm_dataloader):
-    #         # print('\r %d / %d' % (i, len(dataloader)), end='')
-    #         # for i, data in enumerate(dataloader):
-    #         dataset_idx, (img_p, img_t, feat, img_id) = data
-    #         dataset_count[dataset_idx] += 1
-    #         a = 1 + 2
-    #         # print("===> i", i)
-    #         # print("===> dataset_idx", dataset_idx)
-    #         # print("===> img_t", img_t.size(), img_t.device)
-    #         # print("===> feat", feat.size(), feat.device)
-    #         # print("===> img_id", img_id)
-    #     print("====> dataset_count\n", dataset_count)
-    #     print('=====> Using %s to loop over all dataloader' % str(time.time() - t))
-
-
-@torch.no_grad()
-def visualization(opt):
-    # get pretrained model
-    model = archs.select(opt.arch, opt)
-
-    checkpoint = torch.load(opt.visualization_checkpoint_path)
-
-    model.load_state_dict(checkpoint['state_dict'])
-    model.eval()
-
-    model.cuda()
-
-    datasets = dataset.select(opt.dataset, opt, opt.source_path + '/' + opt.dataset)
-
-    dataloader = DataLoader(datasets['evaluation'], num_workers=opt.kernels,
-                            batch_size=opt.bs, shuffle=False)
-
-    data_iterator = tqdm(dataloader, desc='Evaluating dataset `%s`...' % opt.dataset)
-
-    features = []
-    images = []
-
-    for i, out in enumerate(data_iterator):
-
-        class_labels, x, input_indices = out
-
-        # Compute Embedding
-        model_args = {'x': x.cuda()}
-        # Needed for MixManifold settings.
-        if 'mix' in opt.arch:
-            model_args['labels'] = class_labels
-        embeds = model(**model_args)
-        if isinstance(embeds, tuple):
-            embeds, (_, _) = embeds
-
-        features.append(embeds.cpu())
-        images.append(x.cpu())
-
-        break
-
-    features = torch.cat(features, dim=0).numpy()
-    images = torch.cat(images, dim=0).numpy()
-
-    save_dir = opt.visualization_save_dir
-
-    index = 0
-    for feature, image in tqdm(zip(features, images)):
-        image_normed = normalize_image(image)
-
-        plt.subplot(2, 1, 1)
-        plt.imshow(image_normed)
-        plt.axis('off')
-        plt.title('image')
-        plt.tight_layout()
-
-        plt.subplot(2, 1, 2)
-        plt.bar(range(len(feature)), feature)
-        plt.xlabel('feature index')
-        plt.ylabel('feature value')
-        plt.title('feature')
-        plt.tight_layout()
-        plt.savefig("%s/%d_overall.png" % (save_dir, index), dpi=300)
-
-        plt.close()
-
-        index += 1
-
-        if index == 10:
-            break

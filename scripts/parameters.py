@@ -293,6 +293,26 @@ def get_feature_penalty_parameters(parser):
     return parser
 
 
+def get_classifier_fusion_parameters(parser):
+    parser.add_argument('--classifier_fusion_path', default=['<path_to_your_classifier_fusion_path1>',
+                                                             '<path_to_your_classifier_fusion_path2>'], nargs='+',
+                        help='Underlying low dimensional classifier to load to construct high dimensional classifier. '
+                             'Description is same as arch.')
+    parser.add_argument('--classifier_fusion_dim', default=64, type=int,
+                        help='Embedding dimensionality of the low dimensional classifier.')
+    parser.add_argument('--classifier_fusion_datasets', default=['cub200', 'cars196'], nargs='+',
+                        help='datasets for multiple dataset ensemble.')
+    # parser.add_argument('--polling_strategy', default='batch_wise',
+    #                     type=str, choices=['batch_wise', 'dataset_wise'],
+    #                     help='Polling strategy that merges multiple datasets.')
+    parser.add_argument('--classifier_fusion_indexes', default=[0, 64, 64, 128],
+                        nargs='+', help='Feature indices with <start, end> pair to '
+                                        'locate the low dimensional classifier.')
+    parser.add_argument('--classifier_fusion_not_freeze', action='store_true',
+                        help='Flag. If set, the parameters from the low dimensional classifier is trained.')
+    return parser
+
+
 def read_arguments_from_cmd():
     parser = get_basic_parameters()
 
@@ -310,5 +330,8 @@ def read_arguments_from_cmd():
 
     # for feature penalty
     parser = get_feature_penalty_parameters(parser)
+
+    # for classifier fusion
+    parser = get_classifier_fusion_parameters(parser)
 
     return parser.parse_args()

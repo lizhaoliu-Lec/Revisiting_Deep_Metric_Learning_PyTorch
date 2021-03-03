@@ -10,7 +10,8 @@ class FeatureDataset(BaseDataset):
         super().__init__(*args, **kwargs)
 
         self.has_got_features = False
-        self.features = self.get_features(self.pars)
+        if not self.pars.feature_not_used:
+            self.features = self.get_features(self.pars)
         self.return_feature = True
 
     def set_return_feature(self, return_or_not):

@@ -49,12 +49,12 @@ def get_dataloaders(opt, model):
     return dataloaders, train_data_sampler
 
 
-def get_dataset_fusion_dataloaders(opt, model):
+def get_dataset_fusion_dataloaders(opt, model, datasets):
     name_to_dataloaders = {}
     training_sets = []
     training_samplers = []
     name_to_datasampler = {}
-    for i, dataset_name in enumerate(opt.feature_datasets):
+    for i, dataset_name in enumerate(datasets):
         opt.dataset_idx = i
 
         dataloaders = {}
@@ -180,7 +180,7 @@ def train_one_epoch(opt, epoch, scheduler, train_data_sampler, dataloader, model
 
 
 def train_dataset_fusion_one_epoch(opt, epoch, scheduler, name_to_datasampler, dataloader, model, name_to_criteria,
-                                   optimizer, name_to_log):
+                                   optimizer, name_to_log, datasets):
     opt.epoch = epoch
     # Scheduling Changes specifically for cosine scheduling
     if opt.scheduler != 'none':
@@ -195,19 +195,19 @@ def train_dataset_fusion_one_epoch(opt, epoch, scheduler, name_to_datasampler, d
     model.train()
 
     # loss_collect = []
-    dataset_idx_to_loss_collect = {i: [] for i in range(len(opt.feature_datasets))}
-    dataset_idx_to_feature_loss_collect = {i: [] for i in range(len(opt.feature_datasets))}
-    dataset_idx_to_total_loss_collect = {i: [] for i in range(len(opt.feature_datasets))}
+    dataset_idx_to_loss_collect = {i: [] for i in range(len(datasets))}
+    dataset_idx_to_feature_loss_collect = {i: [] for i in range(len(datasets))}
+    dataset_idx_to_total_loss_collect = {i: [] for i in range(len(datasets))}
     data_iterator = tqdm(dataloader, desc='Epoch {}/{} Training...'.format(epoch, opt.n_epochs))
 
     name_to_loss_arg = {}
-    for dataset_name in opt.feature_datasets:
+    for dataset_name in datasets:
         name_to_loss_arg[dataset_name] = {'batch': None, 'labels': None, 'batch_features': None, 'f_embed': None}
 
-    dataset_idx_to_dataset_name = {i: n for i, n in enumerate(opt.feature_datasets)}
-    assert len(opt.feature_datasets) * 2 == len(opt.feature_indexes)
+    dataset_idx_to_dataset_name = {i: n for i, n in enumerate(datasets)}
+    assert len(datasets) * 2 == len(opt.feature_indexes)
     dataset_idx_to_feature_indexes = {i: (opt.feature_indexes[i * 2], opt.feature_indexes[i * 2 + 1])
-                                      for i in range(len(opt.feature_datasets))}
+                                      for i in range(len(datasets))}
     feature_lambda = opt.feature_lambda
 
     for i, out in enumerate(data_iterator):
@@ -305,7 +305,7 @@ def train_dataset_fusion_one_epoch(opt, epoch, scheduler, name_to_datasampler, d
 
 def train_dataset_fusion_one_epoch_wo_feature(opt, epoch, scheduler, name_to_datasampler, dataloader, model,
                                               name_to_criteria,
-                                              optimizer, name_to_log):
+                                              optimizer, name_to_log, datasets):
     opt.epoch = epoch
     # Scheduling Changes specifically for cosine scheduling
     if opt.scheduler != 'none':
@@ -320,21 +320,20 @@ def train_dataset_fusion_one_epoch_wo_feature(opt, epoch, scheduler, name_to_dat
     model.train()
 
     # loss_collect = []
-    dataset_idx_to_loss_collect = {i: [] for i in range(len(opt.feature_datasets))}
+    dataset_idx_to_loss_collect = {i: [] for i in range(len(datasets))}
     data_iterator = tqdm(dataloader, desc='Epoch {}/{} Training...'.format(epoch, opt.n_epochs))
 
     name_to_loss_arg = {}
-    for dataset_name in opt.feature_datasets:
+    for dataset_name in datasets:
         name_to_loss_arg[dataset_name] = {'batch': None, 'labels': None, 'batch_features': None, 'f_embed': None}
 
-    dataset_idx_to_dataset_name = {i: n for i, n in enumerate(opt.feature_datasets)}
-    assert len(opt.feature_datasets) * 2 == len(opt.feature_indexes)
-    feature_lambda = opt.feature_lambda
+    dataset_idx_to_dataset_name = {i: n for i, n in enumerate(datasets)}
+    assert len(datasets) * 2 == len(opt.feature_indexes)
 
     for i, out in enumerate(data_iterator):
         global_steps = epoch * len(data_iterator) + i
 
-        dataset_idx, (class_labels, input, low_dim_features, input_indices) = out
+        dataset_idx, (class_labels, input, input_indices) = out
         dataset_name = dataset_idx_to_dataset_name[dataset_idx]
 
         loss_args = name_to_loss_arg[dataset_name]
@@ -408,26 +407,26 @@ def train_dataset_fusion_one_epoch_wo_feature(opt, epoch, scheduler, name_to_dat
 
 
 @torch.no_grad()
-def evaluate_dataset_fusion(opt, epoch, model, name_to_dataloaders, metric_computer, name_to_log):
-    for dataset_name in opt.feature_datasets:
+def evaluate_dataset_fusion(opt, epoch, model, name_to_dataloaders, metric_computer, name_to_log, datasets):
+    for dataset_name in datasets:
         print('\nEvaluating %s' % dataset_name, end='')
         evaluate(opt, epoch, model, name_to_dataloaders[dataset_name], metric_computer, name_to_log[dataset_name])
 
 
 @torch.no_grad()
-def evaluate(opt, epoch, model, dataloaders, metric_computer, LOG):
+def evaluate(opt, epoch, model, dataloaders, metric_computer, LOG, criterion=None):
     # Evaluate Metric for Training & Test (& Validation)
     model.eval()
     print('\nEpoch {0}/{1} Computing Testing Metrics...'.format(epoch, opt.n_epochs))
     eval.evaluate(LOG, metric_computer, dataloaders['testing'], model, opt, opt.eval_types,
-                  opt.device, log_key='Test')
+                  opt.device, log_key='Test', criterion=criterion)
     if opt.use_tv_split:
         print('\nEpoch {0}/{1} Computing Validation Metrics...'.format(epoch, opt.n_epochs))
         eval.evaluate(LOG, metric_computer, dataloaders['validation'], model, opt, opt.eval_types,
-                      opt.device, log_key='Val')
+                      opt.device, log_key='Val', criterion=criterion)
     print('\nEpoch {0}/{1} Computing Training Metrics...'.format(epoch, opt.n_epochs))
     eval.evaluate(LOG, metric_computer, dataloaders['evaluation'], model, opt, opt.eval_types,
-                  opt.device, log_key='Train')
+                  opt.device, log_key='Train', criterion=criterion)
 
     LOG.update(update_all=True)
 
@@ -586,6 +585,7 @@ if __name__ == '__main__':
         plt.legend()
         plt.show()
 
+
     def run_topK():
         data = [[3, 5, 1, 7], [3, 8, 4, 9]]
         tensor = torch.tensor(data)
@@ -605,6 +605,7 @@ if __name__ == '__main__':
         # ret = tensor[1, ind[1]]
         # print("===> ret: ", ret)
         # print("===> tensor: ", tensor)
+
 
     run_feature_penalty()
     # run_batchIdToEndIndex()
