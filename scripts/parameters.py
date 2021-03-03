@@ -313,6 +313,12 @@ def get_classifier_fusion_parameters(parser):
     return parser
 
 
+def get_standard_classifier_fusion_parameters(parser):
+    parser.add_argument('--classifier_fusion_used', action='store_true',
+                        help='Flag. If set, classifier fusion is used to train the network.')
+    return parser
+
+
 def read_arguments_from_cmd():
     parser = get_basic_parameters()
 
@@ -333,5 +339,8 @@ def read_arguments_from_cmd():
 
     # for classifier fusion
     parser = get_classifier_fusion_parameters(parser)
+
+    # for standard classfier fusion
+    parser = get_standard_classifier_fusion_parameters(parser)
 
     return parser.parse_args()

@@ -75,8 +75,26 @@ def main(opt):
     LOG = logger.LOGGER(opt, sub_loggers=sub_loggers, start_new=True, log_online=opt.log_online)
 
     # LOSS SETUP
+    embed_dim = opt.embed_dim
     batchminer = bmine.select(opt.batch_mining, opt)
     criterion, to_optim = criteria.select(opt.loss, opt, to_optim, batchminer)
+    if opt.classifier_fusion_used:
+        print("Using low dimensional classifier fusion!!!")
+        # create low cls
+        opt.embed_dim = opt.classifier_fusion_dim
+        low_criterion, _ = criteria.select(opt.loss, opt, to_optim, batchminer)
+        opt.embed_dim = embed_dim
+
+        # load low cls
+        print("Loading low dimensional classifier from %s " % opt.classifier_fusion_path[0])
+        checkpoint = torch.load(opt.classifier_fusion_path[0])
+        low_criterion.load_state_dict(checkpoint['state_dict'])
+
+        criterion, to_optim = criteria.select(opt.loss, opt, to_optim, batchminer)
+
+        # merge low cls
+        criterion.load_low_dimensional_classifier(low_criterion, 0, opt.classifier_fusion_dim,
+                                                  not opt.classifier_fusion_not_freeze)
     criterion.to(opt.device)
 
     if 'criterion' in train_data_sampler.name:
