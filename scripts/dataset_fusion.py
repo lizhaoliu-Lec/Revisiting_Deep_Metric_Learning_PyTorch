@@ -81,7 +81,14 @@ def main(opt):
         if dataset_name != 'joint_training':
             opt.dataset = dataset_name
             opt.n_classes = len(name_to_dataloaders[dataset_name]['training'].dataset.avail_classes)
-            criterion, to_optim = criteria.select(opt.loss, opt, to_optim, batchminer)
+            criterion, _, loss_lib = criteria.select(opt.loss, opt, batchminer)
+
+            if loss_lib.REQUIRES_OPTIM:
+                if hasattr(criterion, 'optim_dict_list') and criterion.optim_dict_list is not None:
+                    to_optim += criterion.optim_dict_list
+                else:
+                    to_optim += [{'params': criterion.parameters(), 'lr': criterion.lr}]
+
             criterion.to(opt.device)
             name_to_criterion[dataset_name] = criterion
 

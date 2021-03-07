@@ -91,19 +91,25 @@ def main(opt):
 
             # create low cls
             opt.embed_dim = opt.classifier_fusion_dim
-            low_criterion, _ = criteria.select(opt.loss, opt, to_optim, batchminer)
+            low_criterion, _, _ = criteria.select(opt.loss, opt, batchminer)
             opt.embed_dim = embed_dim
 
             # load low cls
             checkpoint = torch.load(opt.classifier_fusion_path[dataset_name_2_index[dataset_name]])
             low_criterion.load_state_dict(checkpoint['state_dict'])
 
-            criterion, to_optim = criteria.select(opt.loss, opt, to_optim, batchminer)
+            criterion, _, loss_lib = criteria.select(opt.loss, opt, batchminer)
 
             # merge low cls
             start_index, end_index = dataset_idx_to_cls_indexes[dataset_name_2_index[dataset_name]]
             criterion.load_low_dimensional_classifier(low_criterion, start_index, end_index,
                                                       not opt.classifier_fusion_not_freeze)
+
+            if loss_lib.REQUIRES_OPTIM:
+                if hasattr(criterion, 'optim_dict_list') and criterion.optim_dict_list is not None:
+                    to_optim += criterion.optim_dict_list
+                else:
+                    to_optim += [{'params': criterion.parameters(), 'lr': criterion.lr}]
 
             criterion.to(opt.device)
             name_to_criterion[dataset_name] = criterion

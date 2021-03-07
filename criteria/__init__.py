@@ -1,5 +1,3 @@
-### Standard DML criteria
-### Non-Standard Criteria
 from criteria import adversarial_separation
 from criteria import angular, snr, histogram, arcface
 from criteria import lifted, contrastive, softmax
@@ -7,8 +5,7 @@ from criteria import softtriplet, multisimilarity, quadruplet
 from criteria import triplet, margin, proxynca, npair
 
 
-def select(loss, opt, to_optim, batchminer=None):
-    #####
+def select(loss, opt, batchminer=None):
     losses = {'triplet': triplet,
               'margin': margin,
               'proxynca': proxynca,
@@ -25,7 +22,8 @@ def select(loss, opt, to_optim, batchminer=None):
               'quadruplet': quadruplet,
               'adversarial_separation': adversarial_separation}
 
-    if loss not in losses: raise NotImplementedError('Loss {} not implemented!'.format(loss))
+    if loss not in losses:
+        raise NotImplementedError('Loss {} not implemented!'.format(loss))
 
     loss_lib = losses[loss]
     if loss_lib.REQUIRES_BATCHMINER:
@@ -42,10 +40,11 @@ def select(loss, opt, to_optim, batchminer=None):
 
     criterion = loss_lib.Criterion(**loss_par_dict)
 
+    to_optim = None
     if loss_lib.REQUIRES_OPTIM:
         if hasattr(criterion, 'optim_dict_list') and criterion.optim_dict_list is not None:
-            to_optim += criterion.optim_dict_list
+            to_optim = criterion.optim_dict_list
         else:
-            to_optim += [{'params': criterion.parameters(), 'lr': criterion.lr}]
+            to_optim = [{'params': criterion.parameters(), 'lr': criterion.lr}]
 
-    return criterion, to_optim
+    return criterion, to_optim, loss_lib
