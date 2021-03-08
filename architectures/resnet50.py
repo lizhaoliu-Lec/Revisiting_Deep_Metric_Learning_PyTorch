@@ -24,6 +24,9 @@ class Network(nn.Module):
 
         self.model.last_linear = nn.Linear(self.model.last_linear.in_features, opt.embed_dim)
 
+        if 'bn_norm' in opt.arch:
+            self.bn = nn.BatchNorm2d(num_features=opt.embed_dim)
+
         self.layer_blocks = nn.ModuleList([self.model.layer1, self.model.layer2, self.model.layer3, self.model.layer4])
 
         self.out_adjust = None
@@ -37,6 +40,9 @@ class Network(nn.Module):
         x_pooled = x = x.view(x.size(0), -1)
 
         x = self.model.last_linear(x)
+
+        if 'bn_norm' in self.pars.arch:
+            x = self.bn(x)
 
         if 'normalize' in self.pars.arch:
             x = nn.functional.normalize(x, dim=-1)
