@@ -32,6 +32,11 @@ class FeaturePenalty(nn.Module):
 
     @staticmethod
     def get_batchIdToEndIndex(total_dimension, total_epoch, base, reverse=False, start_dimension=None):
+
+        # print("====> total_dimension ", total_dimension)
+        # print("====> total_epoch ", total_epoch)
+        # print("====> base ", base)
+
         # example dim: 64, epoch: 150, base: 8
         batchIdToEndIndex = {}
         start_dimension = base if start_dimension is None else start_dimension
@@ -92,8 +97,8 @@ class FeaturePenalty(nn.Module):
             batch_zeros = torch.zeros((batch_size, feature_size - end_index), device=batch_feature.device,
                                       requires_grad=False)
 
-            print("====> sub_features.size() ", sub_features.size())
-            print("====> batch_zeros.size() ", batch_zeros.size())
+            # print("====> sub_features.size() ", sub_features.size())
+            # print("====> batch_zeros.size() ", batch_zeros.size())
 
             loss = nn.L1Loss()(sub_features, batch_zeros)
 
@@ -154,8 +159,9 @@ if __name__ == '__main__':
 
 
     def run_batchIdToEndIndex():
-        # FeaturePenalty.get_batchIdToEndIndex(64, 150, 8, reverse=True)
-        FeaturePenalty.get_batchIdToEndIndex(32, 150, 2, reverse=True, start_dimension=8)
+        ret = FeaturePenalty.get_batchIdToEndIndex(128, 150, 8, reverse=True, start_dimension=64)
+        print("===> ret ", ret)
+        # FeaturePenalty.get_batchIdToEndIndex(32, 150, 2, reverse=True, start_dimension=8)
 
 
     def plot_feature_penalty():
@@ -209,7 +215,7 @@ if __name__ == '__main__':
         # print("===> tensor: ", tensor)
 
 
-    run_feature_penalty()
-    # run_batchIdToEndIndex()
+    # run_feature_penalty()
+    run_batchIdToEndIndex()
     # plot_feature_penalty()
     # run_topK()

@@ -290,7 +290,7 @@ def get_feature_penalty_parameters(parser):
                         help='Whether to rescale the masked features during the feature penalty process.')
     parser.add_argument('--feature_penalty_topK', action='store_true',
                         help='Whether to rescale the remain topK features during the feature penalty process.')
-    parser.add_argument('--feature_penalty_lambda', default=1.0, type=float,
+    parser.add_argument('--feature_penalty_lambda', default=10.0, type=float,
                         help='Lambda to control optimization strength on feature penalty.')
     return parser
 

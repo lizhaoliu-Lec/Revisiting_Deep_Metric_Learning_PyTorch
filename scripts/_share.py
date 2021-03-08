@@ -138,10 +138,12 @@ def train_one_epoch(opt, epoch, scheduler, train_data_sampler, dataloader, model
         loss = criterion(**loss_args)
 
         if feature_penalty is not None:
+            # print("====> feature_penalty.current_dim ", feature_penalty.current_dim)
             LOG.tensorboard.add_scalar(tag='FeaturePenalty/Dim', scalar_value=feature_penalty.current_dim,
                                        global_step=global_steps)
             feature_penalty_loss = feature_penalty(embeds, epoch)
             if feature_penalty_loss is not None:
+                # print("====> feature_penalty_loss.item() ", feature_penalty_loss.item())
                 LOG.tensorboard.add_scalar(tag='FeaturePenalty/Loss', scalar_value=feature_penalty_loss.item(),
                                            global_step=global_steps)
 
