@@ -257,6 +257,9 @@ def visualization(opt):
 
     save_dir = opt.visualization_save_dir
 
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
     index = 0
     for feature, image in tqdm(zip(features, images)):
         image_normed = normalize_image(image)
