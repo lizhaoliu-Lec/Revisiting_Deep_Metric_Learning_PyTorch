@@ -9,7 +9,8 @@ import criteria as criteria
 import metric
 from utilities import logger
 from utilities import misc
-from scripts._share import set_seed, get_dataloaders, train_one_epoch, evaluate, FeaturePenalty
+from scripts._share import set_seed, get_dataloaders, train_one_epoch, evaluate
+from modules.feature_penalty import FeaturePenalty
 
 
 def main(opt):
