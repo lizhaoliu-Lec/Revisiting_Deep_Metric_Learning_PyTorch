@@ -325,9 +325,21 @@ def get_twin_criterion_parameters(parser):
     parser.add_argument('--twin_criterion_used', action='store_true',
                         help='Flag. If set, twin classifier is used to train the network.')
     parser.add_argument('--twin_criterion_dim', default=64, type=int,
-                        help='Number of dimension fo the twin classifier.')
+                        help='Number of dimension of the twin classifier.')
     parser.add_argument('--twin_criterion_lambda', default=1.0, type=float,
                         help='Lambda to control optimization strength on the twin classifier.')
+    return parser
+
+
+def get_xbm_parameters(parser):
+    parser.add_argument('--xbm_used', action='store_true',
+                        help='Flag. If set, xbm is used to train the network.')
+    parser.add_argument('--xbm_size', default=55000, type=int,
+                        help='Storage size of the xbm.')
+    parser.add_argument('--xbm_lambda', default=1.0, type=float,
+                        help='Lambda to control optimization strength on the xbm module.')
+    parser.add_argument('--xbm_start_iter', default=1000, type=int,
+                        help='The number of iter to start using xbm.')
     return parser
 
 
@@ -357,5 +369,8 @@ def read_arguments_from_cmd():
 
     # for twin criterion
     parser = get_twin_criterion_parameters(parser)
+
+    # for xbm
+    parser = get_xbm_parameters(parser)
 
     return parser.parse_args()

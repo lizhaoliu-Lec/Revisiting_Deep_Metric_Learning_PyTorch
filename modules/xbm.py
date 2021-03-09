@@ -5,10 +5,11 @@ class XBM:
     """
     Cross-Batch Memory for Embedding Learning
     """
-    def __init__(self, opt):
-        self.K = opt.xbm_size
+
+    def __init__(self, xbm_size):
+        self.K = xbm_size
         self.feats = torch.zeros(self.K, 128).cuda()
-        self.targets = torch.zeros(self.K, dtype=torch.long).cuda()
+        self.targets = torch.zeros(self.K, dtype=torch.long)
         self.ptr = 0
 
     @property

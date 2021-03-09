@@ -96,7 +96,7 @@ def get_dataset_fusion_dataloaders(opt, model, datasets):
 
 
 def train_one_epoch(opt, epoch, scheduler, train_data_sampler, dataloader, model, criterion, optimizer, LOG,
-                    feature_penalty=None, twin_criterion=None):
+                    feature_penalty=None, twin_criterion=None, xbm=None):
     opt.epoch = epoch
     # Scheduling Changes specifically for cosine scheduling
     if opt.scheduler != 'none':
@@ -159,6 +159,24 @@ def train_one_epoch(opt, epoch, scheduler, train_data_sampler, dataloader, model
                                            global_step=global_steps)
 
                 loss += opt.feature_penalty_lambda * feature_penalty_loss
+
+        num_iter = opt.bs * epoch + i
+        if xbm is not None and num_iter > opt.xbm_start_iter:
+            xbm.enqueue_dequeue(embeds.detach(), class_labels.detach())
+
+            xbm_features, xbm_targets = xbm.get()
+
+            xbm_features = torch.cat([embeds, xbm_features], dim=0)
+            xbm_targets = torch.cat([class_labels, xbm_targets], dim=0)
+
+            xbm_loss_args = {
+                'batch': xbm_features,
+                'labels': xbm_targets
+            }
+            xbm_loss = criterion(**xbm_loss_args)
+            LOG.tensorboard.add_scalar(tag='XBM/Loss', scalar_value=xbm_loss.item(),
+                                       global_step=global_steps)
+            loss += opt.xbm_lambda * xbm_loss
 
         optimizer.zero_grad()
         loss.backward()

@@ -7,6 +7,7 @@ import architectures as archs
 import batchminer as bmine
 import criteria as criteria
 import metric
+from modules.xbm import XBM
 from utilities import logger
 from utilities import misc
 from scripts._share import set_seed, get_dataloaders, train_one_epoch, evaluate
@@ -157,6 +158,12 @@ def main(opt):
                                          rescale=opt.feature_penalty_rescale,
                                          topK=opt.feature_penalty_topK)
 
+    xbm = None
+    if opt.xbm_used:
+        print("[XBM] Using XBM for model training with (xbm_size, xbm_lambda, xbm_start_iter) = (%d, %f, %d)"
+              % (opt.xbm_size, opt.xbm_lambda, opt.xbm_start_iter))
+        xbm = XBM(xbm_size=opt.xbm_size)
+
     for epoch in range(opt.n_epochs):
         epoch_start_time = time.time()
 
@@ -166,7 +173,8 @@ def main(opt):
         train_one_epoch(opt, epoch, scheduler, train_data_sampler, dataloaders['training'],
                         model, criterion, optimizer, LOG,
                         feature_penalty=feature_penalty,
-                        twin_criterion=twin_criterion)
+                        twin_criterion=twin_criterion,
+                        xbm=xbm)
         evaluate(opt, epoch, model, dataloaders, metric_computer, LOG, criterion=criterion)
 
         print('Total Epoch Runtime: {0:4.2f}s'.format(time.time() - epoch_start_time))
