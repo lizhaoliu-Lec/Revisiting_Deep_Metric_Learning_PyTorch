@@ -107,6 +107,24 @@ def main(opt):
     if 'criterion' in train_data_sampler.name:
         train_data_sampler.internal_criterion = criterion
 
+    twin_criterion = None
+    if opt.twin_criterion_used:
+        print("[Twin Criterion]: Using (twin_criterion_dim, twin_criterion_lambda) = (%d, %f)"
+              % (opt.twin_criterion_dim, opt.twin_criterion_lambda))
+        opt.embed_dim = opt.twin_criterion_dim
+        twin_criterion, _, twin_loss_lib = criteria.select(opt.loss, opt, batchminer)
+        opt.embed_dim = embed_dim
+
+        if twin_loss_lib.REQUIRES_OPTIM:
+            if hasattr(twin_criterion, 'optim_dict_list') and twin_criterion.optim_dict_list is not None:
+                to_optim += twin_criterion.optim_dict_list
+            else:
+                to_optim += [{'params': twin_criterion.parameters(), 'lr': twin_criterion.lr}]
+
+        # TODO weather to train_data_sampler.internal_criterion = criterion
+
+        twin_criterion.to(opt.device)
+
     # OPTIM SETUP
     if opt.optim == 'adam':
         optimizer = torch.optim.Adam(to_optim)
@@ -146,7 +164,9 @@ def main(opt):
             train_data_sampler.full_storage_update(dataloaders['evaluation'], model, opt.device)
 
         train_one_epoch(opt, epoch, scheduler, train_data_sampler, dataloaders['training'],
-                        model, criterion, optimizer, LOG, feature_penalty=feature_penalty)
+                        model, criterion, optimizer, LOG,
+                        feature_penalty=feature_penalty,
+                        twin_criterion=twin_criterion)
         evaluate(opt, epoch, model, dataloaders, metric_computer, LOG, criterion=criterion)
 
         print('Total Epoch Runtime: {0:4.2f}s'.format(time.time() - epoch_start_time))

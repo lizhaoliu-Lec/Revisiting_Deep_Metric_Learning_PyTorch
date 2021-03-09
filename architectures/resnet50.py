@@ -31,6 +31,7 @@ class Network(nn.Module):
         self.layer_blocks = nn.ModuleList([self.model.layer1, self.model.layer2, self.model.layer3, self.model.layer4])
 
         self.out_adjust = None
+        self.x_before_normed = None
 
     def forward(self, x, **kwargs):
         x = self.model.maxpool(self.model.relu(self.model.bn1(self.model.conv1(x))))
@@ -40,11 +41,14 @@ class Network(nn.Module):
         x = self.model.avgpool(x)
         x_pooled = x = x.view(x.size(0), -1)
 
-        x = self.model.last_linear(x)
+        x_before_normed = self.model.last_linear(x)
 
         if 'bn_norm' in self.pars.arch:
-            x = self.bn(x)
+            x_before_normed = self.bn(x_before_normed)
 
+        self.x_before_normed = x_before_normed
+
+        x = x_before_normed
         if 'normalize' in self.pars.arch:
             x = nn.functional.normalize(x, dim=-1)
         if self.out_adjust and not self.train:

@@ -321,6 +321,16 @@ def get_standard_classifier_fusion_parameters(parser):
     return parser
 
 
+def get_twin_criterion_parameters(parser):
+    parser.add_argument('--twin_criterion_used', action='store_true',
+                        help='Flag. If set, twin classifier is used to train the network.')
+    parser.add_argument('--twin_criterion_dim', default=64, type=int,
+                        help='Number of dimension fo the twin classifier.')
+    parser.add_argument('--twin_criterion_lambda', default=1.0, type=float,
+                        help='Lambda to control optimization strength on the twin classifier.')
+    return parser
+
+
 def read_arguments_from_cmd():
     parser = get_basic_parameters()
 
@@ -342,7 +352,10 @@ def read_arguments_from_cmd():
     # for classifier fusion
     parser = get_classifier_fusion_parameters(parser)
 
-    # for standard classfier fusion
+    # for standard classifier fusion
     parser = get_standard_classifier_fusion_parameters(parser)
+
+    # for twin criterion
+    parser = get_twin_criterion_parameters(parser)
 
     return parser.parse_args()

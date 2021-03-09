@@ -4,6 +4,7 @@ import numpy as np
 import torch.multiprocessing
 from torch.utils.data import DataLoader
 import torch.nn as nn
+import torch.nn.functional as F
 from tqdm import tqdm
 
 import datasampler as dsamplers
@@ -95,7 +96,7 @@ def get_dataset_fusion_dataloaders(opt, model, datasets):
 
 
 def train_one_epoch(opt, epoch, scheduler, train_data_sampler, dataloader, model, criterion, optimizer, LOG,
-                    feature_penalty=None):
+                    feature_penalty=None, twin_criterion=None):
     opt.epoch = epoch
     # Scheduling Changes specifically for cosine scheduling
     if opt.scheduler != 'none':
@@ -106,7 +107,7 @@ def train_one_epoch(opt, epoch, scheduler, train_data_sampler, dataloader, model
 
     # Train one epoch
     start = time.time()
-    _ = model.train()
+    model.train()
 
     loss_collect = []
     data_iterator = tqdm(dataloader, desc='Epoch {}/{} Training...'.format(epoch, opt.n_epochs))
@@ -125,17 +126,27 @@ def train_one_epoch(opt, epoch, scheduler, train_data_sampler, dataloader, model
         if 'mix' in opt.arch:
             model_args['labels'] = class_labels
         embeds = model(**model_args)
+        features = None
         if isinstance(embeds, tuple):
             embeds, (avg_features, features) = embeds
-            # if feature_penalty is not None:
-            #     features = feature_penalty(features, epoch)
-            loss_args['batch_features'] = features
 
         # Compute Loss
+        loss_args['batch_features'] = features
         loss_args['batch'] = embeds
         loss_args['labels'] = class_labels
         loss_args['f_embed'] = model.model.last_linear
         loss = criterion(**loss_args)
+
+        if twin_criterion is not None and hasattr(model, 'x_before_normed') and model.x_before_normed is not None:
+            twin_criterion_dim = opt.twin_criterion_dim
+            twin_loss_args = {
+                'batch': F.normalize(model.x_before_normed[:, :twin_criterion_dim], dim=-1),
+                'labels': class_labels,
+            }
+            twin_loss = twin_criterion(**twin_loss_args)
+            LOG.tensorboard.add_scalar(tag='Twin/Loss', scalar_value=twin_loss.item(),
+                                       global_step=global_steps)
+            loss += opt.twin_criterion_lambda * twin_loss
 
         if feature_penalty is not None:
             # print("====> feature_penalty.current_dim ", feature_penalty.current_dim)
