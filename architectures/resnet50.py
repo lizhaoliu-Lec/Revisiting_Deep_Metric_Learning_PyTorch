@@ -25,7 +25,8 @@ class Network(nn.Module):
         self.model.last_linear = nn.Linear(self.model.last_linear.in_features, opt.embed_dim)
 
         if 'bn_norm' in opt.arch:
-            self.bn = nn.BatchNorm2d(num_features=opt.embed_dim)
+            print("Using BN Norm after the final linear!!!")
+            self.bn = nn.BatchNorm1d(num_features=opt.embed_dim)
 
         self.layer_blocks = nn.ModuleList([self.model.layer1, self.model.layer2, self.model.layer3, self.model.layer4])
 
